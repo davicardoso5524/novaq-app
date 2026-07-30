@@ -1,4 +1,4 @@
-import { StoreSectionType, type Prisma } from "@prisma/client";
+import { Prisma, StoreSectionType } from "@prisma/client";
 import { prisma } from "../prisma";
 import type { TenantContext } from "../tenant/types";
 import {
