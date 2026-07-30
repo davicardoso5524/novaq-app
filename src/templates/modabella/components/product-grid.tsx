@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { sanitizePublicImageUrl } from "../../../lib/catalog/public-image-url";
 import type { PublicProduct } from "../../../lib/catalog/types";
 import { ArrowIcon } from "./icons";
 
@@ -9,10 +10,12 @@ export function ProductGrid({
   products,
   title,
   categorySlug,
+  emptyMessage = "Novos produtos estão chegando.",
 }: {
   products: PublicProduct[];
   title: string;
   categorySlug?: string;
+  emptyMessage?: string;
 }) {
   return (
     <section id="novidades" className="modabella-section modabella-products" aria-labelledby="modabella-products-title">
@@ -23,13 +26,14 @@ export function ProductGrid({
       {products.length ? (
         <div className="modabella-product-grid">
           {products.map((product, index) => {
-            const image = product.images[0];
+            const image = product.images.find((item) => sanitizePublicImageUrl(item.url));
+            const imageUrl = image ? sanitizePublicImageUrl(image.url) : undefined;
             return (
               <article className="modabella-product-card" key={product.slug}>
                 <Link href={`/produto/${product.slug}`}>
                   <div className="modabella-product-card__image">
-                    {image ? (
-                      <Image src={image.url} alt={image.altText ?? product.name} fill sizes="(max-width: 640px) 50vw, 280px" loading={index === 0 ? "eager" : "lazy"} unoptimized />
+                    {image && imageUrl ? (
+                      <Image src={imageUrl} alt={image.altText ?? product.name} fill sizes="(max-width: 640px) 50vw, 280px" loading={index === 0 ? "eager" : "lazy"} unoptimized />
                     ) : <span aria-hidden="true">✦</span>}
                   </div>
                   <div className="modabella-product-card__body">
@@ -44,7 +48,7 @@ export function ProductGrid({
             );
           })}
         </div>
-      ) : <p className="modabella-empty">Novos produtos estão chegando.</p>}
+      ) : <p className="modabella-empty">{emptyMessage}</p>}
     </section>
   );
 }
