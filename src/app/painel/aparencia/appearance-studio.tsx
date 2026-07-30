@@ -79,7 +79,7 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const [viewportWidth, setViewportWidth] = useState(0);
   const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
   const previewCloseRef = useRef<HTMLButtonElement | null>(null);
 
@@ -131,6 +131,7 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
       }
     }
 
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);

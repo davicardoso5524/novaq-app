@@ -3,6 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 import { TemplateKey } from "@prisma/client";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppearanceStudio } from "../src/app/painel/aparencia/appearance-studio";
@@ -184,6 +185,26 @@ describe("AppearanceStudio", () => {
     expect(screen.getByRole("button", { name: /template 04/i })).toBeDisabled();
     expect(screen.getAllByText("Moda Bella Fortaleza").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Nova coleção").length).toBeGreaterThan(0);
+  });
+
+  it("renders safely during server-side rendering without window", () => {
+    const originalWindow = globalThis.window;
+    // @ts-expect-error intentional SSR simulation
+    delete globalThis.window;
+
+    try {
+      expect(() =>
+        renderToStaticMarkup(
+          <AppearanceStudio tenantId="tenant-modabella" catalog={previewCatalog} />,
+        ),
+      ).not.toThrow();
+    } finally {
+      Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        writable: true,
+        value: originalWindow,
+      });
+    }
   });
 
   it("keeps the preview available at 1024px without falling into a breakpoint gap", async () => {
