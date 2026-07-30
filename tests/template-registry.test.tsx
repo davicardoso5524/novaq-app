@@ -21,6 +21,8 @@ const catalog = {
         subtitle: "Peças escolhidas para todos os momentos.",
         ctaLabel: "Ver coleção",
         ctaHref: "#novidades",
+        imageUrl: "https://cdn.example.com/editorial-hero.jpg",
+        imageAlt: "Editorial da coleção de verão",
       },
     },
     { type: "CATEGORIES", position: 1, content: { title: "Escolha por categoria" } },
@@ -67,7 +69,8 @@ describe("shared storefront template registry", () => {
     expect(html).toContain('id="novidades"');
     expect(html).toContain("189,90");
     expect(html).toContain('loading="eager"');
-    expect(html).toContain('alt="Destaque da coleção: Vestido Aurora"');
+    expect(html).toContain('alt="Editorial da coleção de verão"');
+    expect(html).toContain('src="https://cdn.example.com/editorial-hero.jpg"');
     expect(JSON.stringify(catalog)).toBe(before);
   });
 
@@ -100,13 +103,13 @@ describe("shared storefront template registry", () => {
     expect(html).toContain('href="/categorias/vestidos"');
   });
 
-  it("links the complete product feed to the categories index", () => {
+  it("links the complete product feed to the first published category", () => {
     const html = renderToStaticMarkup(
-      <ProductGrid products={catalog.products} title="Destaques" />,
+      <ProductGrid products={catalog.products} title="Destaques" categorySlug="acessorios" />,
     );
 
-    expect(html).toContain('href="/categorias"');
-    expect(html).not.toContain('href="/categorias/vestidos">Ver todos');
+    expect(html).toContain('href="/categorias/acessorios"');
+    expect(html).not.toContain('href="/categorias"');
     expect(html).toContain('loading="eager"');
   });
 
@@ -114,28 +117,68 @@ describe("shared storefront template registry", () => {
     const section = {
       type: "HERO",
       position: 0,
-      content: { ctaHref: "javascript:alert(1)" },
+      content: {
+        ctaHref: "javascript:alert(1)",
+        imageUrl: "https://cdn.example.com/section-hero.jpg",
+        imageAlt: "Imagem configurada no hero",
+      },
     } as const;
     const html = renderToStaticMarkup(
       <HeroSection
         section={section}
         fallbackHref="/categorias/acessorios"
-        featuredProduct={catalog.products[0]}
       />,
     );
 
     expect(html).toContain('href="/categorias/acessorios"');
-    expect(html).toContain('alt="Destaque da coleção: Vestido Aurora"');
+    expect(html).toContain('alt="Imagem configurada no hero"');
+    expect(html).toContain('src="https://cdn.example.com/section-hero.jpg"');
+    expect(html).not.toContain("aurora.jpg");
     expect(html).not.toContain("javascript:");
   });
 
-  it("uses the categories index in navigation and omits unavailable contact", () => {
+  it("uses the first published category in navigation and omits unavailable contact", () => {
     const html = renderToStaticMarkup(
+      <BottomNavigation
+        categorySlug="acessorios"
+        whatsAppNumber={null}
+        storeName="Moda Bella"
+      />,
+    );
+
+    expect(html).toContain('href="/categorias/acessorios"');
+    expect(html).not.toContain("Contato");
+    expect(html).not.toContain("wa.me");
+  });
+
+  it("omits category links when the tenant has no published category", () => {
+    const gridHtml = renderToStaticMarkup(
+      <ProductGrid products={catalog.products} title="Destaques" />,
+    );
+    const navHtml = renderToStaticMarkup(
       <BottomNavigation whatsAppNumber={null} storeName="Moda Bella" />,
     );
 
-    expect(html).toContain('href="/categorias"');
-    expect(html).not.toContain("Contato");
-    expect(html).not.toContain("wa.me");
+    expect(gridHtml).not.toContain("Ver todos");
+    expect(navHtml).not.toContain("Categorias");
+    expect(gridHtml).not.toContain('href="/categorias"');
+    expect(navHtml).not.toContain('href="/categorias"');
+  });
+
+  it("keeps the hero on a real section when no category fallback exists", () => {
+    const catalogWithoutCategories: PublicStoreData = {
+      ...catalog,
+      categories: [],
+      sections: catalog.sections.map((section) =>
+        section.type === "HERO"
+          ? { ...section, content: { ...section.content, ctaHref: "javascript:alert(1)" } }
+          : section,
+      ),
+    };
+
+    const html = renderToStaticMarkup(<>{renderStoreTemplate(catalogWithoutCategories)}</>);
+
+    expect(html).toContain('href="#novidades"');
+    expect(html).not.toContain('href="/categorias"');
   });
 });

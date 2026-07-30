@@ -28,6 +28,8 @@ export type PublicHeroSection = PublicStoreSectionBase<
     subtitle?: string;
     ctaLabel?: string;
     ctaHref?: string;
+    imageUrl?: string;
+    imageAlt?: string;
   }
 >;
 

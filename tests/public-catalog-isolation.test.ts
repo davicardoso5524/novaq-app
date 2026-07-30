@@ -126,7 +126,11 @@ describe("public catalog host isolation", () => {
       {
         type: "HERO",
         position: 0,
-        content: { title: "Seu estilo, sua história" },
+        content: {
+          title: "Seu estilo, sua história",
+          imageUrl: "https://cdn.example.com/hero.jpg",
+          imageAlt: "Editorial ModaBella",
+        },
       },
     ]);
     database.category.findMany.mockResolvedValue([
@@ -159,7 +163,15 @@ describe("public catalog host isolation", () => {
     expect(store).toEqual({
       tenant: { name: "ModaBella", slug: "modabella" },
       theme: { template: "MODABELLA", config: { accentColor: "#B45372" } },
-      sections: [{ type: "HERO", position: 0, content: { title: "Seu estilo, sua história" } }],
+      sections: [{
+        type: "HERO",
+        position: 0,
+        content: {
+          title: "Seu estilo, sua história",
+          imageUrl: "https://cdn.example.com/hero.jpg",
+          imageAlt: "Editorial ModaBella",
+        },
+      }],
       categories: [{ name: "Vestidos", slug: "vestidos", position: 0 }],
       products: [
         {
@@ -195,6 +207,9 @@ describe("public catalog host isolation", () => {
           subtitle: "Subtitle",
           ctaLabel: "Shop",
           ctaHref: "#products",
+          imageUrl: "https://cdn.example.com/configured-hero.jpg",
+          imageAlt: "Configured hero",
+          imageAdminId: "asset-secret",
           tenantId: "tenant-other",
         },
       },
@@ -237,6 +252,8 @@ describe("public catalog host isolation", () => {
           subtitle: "Subtitle",
           ctaLabel: "Shop",
           ctaHref: "#products",
+          imageUrl: "https://cdn.example.com/configured-hero.jpg",
+          imageAlt: "Configured hero",
         },
       },
       { type: "CATEGORIES", position: 1, content: { title: "Categories" } },

@@ -11,6 +11,26 @@ const domainSchema = z
     "Informe um domínio válido sem protocolo ou caminho.",
   );
 
+function normalizeConfiguredDomain(value: string | undefined): string {
+  if (!value?.trim()) return "";
+
+  try {
+    const normalized = value.includes("://") ? value : `http://${value}`;
+    return new URL(normalized).hostname.toLowerCase().replace(/\.$/, "");
+  } catch {
+    return "";
+  }
+}
+
+const publicDomainSchema = domainSchema.refine((domain) => {
+  const baseDomain = normalizeConfiguredDomain(
+    process.env.PLATFORM_CATALOG_BASE_DOMAIN ?? "localhost",
+  );
+  if (!baseDomain) return true;
+
+  return domain !== baseDomain && !domain.endsWith(`.${baseDomain}`);
+}, "Este domínio pertence ao namespace reservado da plataforma.");
+
 export const tenantCreateSchema = z.object({
   name: z.string().trim().min(2).max(120),
   slug: z
@@ -21,13 +41,13 @@ export const tenantCreateSchema = z.object({
     .max(63)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use slug em kebab-case."),
   ownerEmail: z.string().trim().toLowerCase().email(),
-  publicDomain: domainSchema.nullish(),
+  publicDomain: publicDomainSchema.nullish(),
 });
 
 export const tenantUpdateSchema = z
   .object({
     name: z.string().trim().min(2).max(120).optional(),
-    publicDomain: domainSchema.nullable().optional(),
+    publicDomain: publicDomainSchema.nullable().optional(),
     status: z.nativeEnum(TenantStatus).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "Informe ao menos uma alteração.");

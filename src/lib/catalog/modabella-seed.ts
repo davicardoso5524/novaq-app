@@ -1,4 +1,7 @@
 export const MODABELLA_TENANT_SLUG = "modabella-demo";
+const MODABELLA_HERO_IMAGE_URL =
+  "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1200&q=85";
+const MODABELLA_HERO_IMAGE_ALT = "Bolsa Luna caramelo em destaque";
 
 export type ModaBellaSeed = {
   settings: {
@@ -78,6 +81,8 @@ export function getModaBellaSeed(): ModaBellaSeed {
           subtitle: "Peças escolhidas para acompanhar todos os seus momentos.",
           ctaLabel: "Ver novidades",
           ctaHref: "#novidades",
+          imageUrl: MODABELLA_HERO_IMAGE_URL,
+          imageAlt: MODABELLA_HERO_IMAGE_ALT,
         },
       },
       {
@@ -158,7 +163,7 @@ export function getModaBellaSeed(): ModaBellaSeed {
         media: [
           {
             storageKey: "catalog/bolsa-luna-caramelo-01.jpg",
-            url: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1200&q=85",
+            url: MODABELLA_HERO_IMAGE_URL,
             fileName: "bolsa-luna-caramelo-01.jpg",
             mimeType: "image/jpeg",
             sizeBytes: 141_000,

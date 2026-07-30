@@ -5,12 +5,20 @@ import { ArrowIcon } from "./icons";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-export function ProductGrid({ products, title }: { products: PublicProduct[]; title: string }) {
+export function ProductGrid({
+  products,
+  title,
+  categorySlug,
+}: {
+  products: PublicProduct[];
+  title: string;
+  categorySlug?: string;
+}) {
   return (
     <section id="novidades" className="modabella-section modabella-products" aria-labelledby="modabella-products-title">
       <div className="modabella-section__heading">
         <h2 id="modabella-products-title">{title}</h2>
-        {products[0] ? <Link href="/categorias">Ver todos <ArrowIcon /></Link> : null}
+        {categorySlug ? <Link href={`/categorias/${categorySlug}`}>Ver todos <ArrowIcon /></Link> : null}
       </div>
       {products.length ? (
         <div className="modabella-product-grid">

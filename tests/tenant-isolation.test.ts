@@ -47,6 +47,7 @@ const owner = {
 describe("tenant isolation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.PLATFORM_CATALOG_BASE_DOMAIN = "localhost";
     database.$transaction.mockImplementation(async (operation) => operation(database));
   });
 

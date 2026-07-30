@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { PublicHeroSection, PublicProduct } from "../../../lib/catalog/types";
+import type { PublicHeroSection } from "../../../lib/catalog/types";
 
 function safeStoreHref(value: string | undefined, fallbackHref: string): string {
   if (value?.startsWith("#")) return value;
@@ -11,21 +11,19 @@ function safeStoreHref(value: string | undefined, fallbackHref: string): string 
 export function HeroSection({
   section,
   fallbackHref,
-  featuredProduct,
 }: {
   section?: PublicHeroSection;
   fallbackHref: string;
-  featuredProduct?: PublicProduct;
 }) {
   const content = section?.content;
-  const image = featuredProduct?.images[0];
+  const imageUrl = content?.imageUrl;
   return (
     <section className="modabella-hero" aria-labelledby="modabella-hero-title">
-      {image ? (
+      {imageUrl ? (
         <Image
           className="modabella-hero__image"
-          src={image.url}
-          alt={`Destaque da coleção: ${featuredProduct.name}`}
+          src={imageUrl}
+          alt={content.imageAlt ?? ""}
           fill
           sizes="(max-width: 700px) 100vw, 1180px"
           loading="eager"
@@ -42,7 +40,7 @@ export function HeroSection({
           {content?.ctaLabel ?? "Ver coleção"}
         </Link>
       </div>
-      {!image ? <div className="modabella-hero__shape" aria-hidden="true">MB</div> : null}
+      {!imageUrl ? <div className="modabella-hero__shape" aria-hidden="true">MB</div> : null}
     </section>
   );
 }

@@ -13,7 +13,9 @@ function readPublicString(
     | "title"
     | "subtitle"
     | "ctaLabel"
-    | "ctaHref",
+    | "ctaHref"
+    | "imageUrl"
+    | "imageAlt",
 ): string | undefined {
   if (!config || Array.isArray(config) || typeof config !== "object") return undefined;
 
@@ -52,6 +54,8 @@ function mapPublicSection(section: {
           ...optionalValue("subtitle", readPublicString(section.content, "subtitle")),
           ...optionalValue("ctaLabel", readPublicString(section.content, "ctaLabel")),
           ...optionalValue("ctaHref", readPublicString(section.content, "ctaHref")),
+          ...optionalValue("imageUrl", readPublicString(section.content, "imageUrl")),
+          ...optionalValue("imageAlt", readPublicString(section.content, "imageAlt")),
         },
       };
     case StoreSectionType.CATEGORIES:

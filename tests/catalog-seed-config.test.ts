@@ -9,6 +9,14 @@ describe("getModaBellaSeed", () => {
     expect(seed.settings.whatsAppNumber).toMatch(/^55\d{10,11}$/);
     expect(seed.categories.length).toBeGreaterThanOrEqual(2);
 
+    const hero = seed.sections.find((section) => section.type === "HERO");
+    const productMediaUrls = seed.products.flatMap((product) =>
+      product.media.map((media) => media.url),
+    );
+    expect(hero?.content.imageUrl).toEqual(expect.any(String));
+    expect(productMediaUrls).toContain(hero?.content.imageUrl);
+    expect(hero?.content.imageAlt).toEqual(expect.any(String));
+
     const productSlugs = seed.products.map((product) => product.slug);
     expect(new Set(productSlugs).size).toBe(productSlugs.length);
 

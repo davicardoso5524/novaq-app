@@ -13,9 +13,10 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
   const categoryTitle = data.sections.find((section) => section.type === "CATEGORIES")?.content.title ?? "Categorias";
   const feed = data.sections.find((section) => section.type === "PRODUCT_FEED");
   const products = data.products.slice(0, feed?.content.limit ?? data.products.length);
-  const heroFallbackHref = data.categories[0]
-    ? `/categorias/${data.categories[0].slug}`
-    : "/categorias";
+  const firstCategorySlug = data.categories[0]?.slug;
+  const heroFallbackHref = firstCategorySlug
+    ? `/categorias/${firstCategorySlug}`
+    : "#novidades";
   const style: StoreStyle = { "--store-accent": data.theme?.config.accentColor ?? "#6C3CE0" };
 
   return (
@@ -26,16 +27,23 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
         <HeroSection
           section={hero}
           fallbackHref={heroFallbackHref}
-          featuredProduct={data.products[0]}
         />
         <CategoryStrip categories={data.categories} title={categoryTitle} />
-        <ProductGrid products={products} title={feed?.content.title ?? "Destaques"} />
+        <ProductGrid
+          products={products}
+          title={feed?.content.title ?? "Destaques"}
+          categorySlug={firstCategorySlug}
+        />
       </main>
       <footer className="modabella-footer">
         <strong>{data.settings.name}</strong>
         <span>Catálogo online</span>
       </footer>
-      <BottomNavigation whatsAppNumber={data.settings.whatsAppNumber} storeName={data.settings.name} />
+      <BottomNavigation
+        categorySlug={firstCategorySlug}
+        whatsAppNumber={data.settings.whatsAppNumber}
+        storeName={data.settings.name}
+      />
     </div>
   );
 }

@@ -32,7 +32,7 @@ vi.mock("../src/lib/tenant/require-context", async () => {
 });
 
 import { GET as listTenants, POST as createTenant } from "../src/app/api/tenants/route";
-import { GET as getTenant } from "../src/app/api/tenants/[tenantId]/route";
+import { GET as getTenant, PATCH as updateTenant } from "../src/app/api/tenants/[tenantId]/route";
 import { POST as createMember } from "../src/app/api/tenants/[tenantId]/members/route";
 import { TenantAccessError } from "../src/lib/tenant/types";
 
@@ -65,6 +65,7 @@ function session(role: GlobalRole = GlobalRole.USER) {
 describe("tenant API authorization", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.PLATFORM_CATALOG_BASE_DOMAIN = "catalog.novaq.com.br";
     mocks.$transaction.mockImplementation(async (operation) => operation(mocks));
   });
 
@@ -126,6 +127,47 @@ describe("tenant API authorization", () => {
     );
 
     expect(response.status).toBe(409);
+  });
+
+  it("rejects a platform namespace as public domain during creation", async () => {
+    mocks.auth.mockResolvedValue(session(GlobalRole.SUPERADMIN));
+
+    const response = await createTenant(
+      new Request("http://localhost/api/tenants", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Loja A",
+          slug: "loja-a",
+          ownerEmail: "owner@example.com",
+          publicDomain: "cliente.catalog.novaq.com.br",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(mocks.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("rejects a platform namespace as public domain during editing", async () => {
+    mocks.auth.mockResolvedValue(session(GlobalRole.SUPERADMIN));
+    mocks.requireTenantContext.mockResolvedValue({
+      tenantId: tenant.id,
+      tenant,
+      userId: "user-a",
+      membership: null,
+      isSuperadmin: true,
+    });
+
+    const response = await updateTenant(
+      new Request("http://localhost/api/tenants/tenant-a", {
+        method: "PATCH",
+        body: JSON.stringify({ publicDomain: "catalog.novaq.com.br" }),
+      }),
+      { params: Promise.resolve({ tenantId: tenant.id }) },
+    );
+
+    expect(response.status).toBe(422);
+    expect(mocks.tenant.update).not.toHaveBeenCalled();
   });
 
   it("maps an unavailable authorized tenant to 404", async () => {
