@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: novaq-multitenant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: novaq
+      POSTGRES_PASSWORD: novaq
+      POSTGRES_DB: novaq_multitenant
+    ports:
+      - "5434:5432"
+    volumes:
+      - novaq_multitenant_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novaq -d novaq_multitenant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  novaq_multitenant_pgdata:

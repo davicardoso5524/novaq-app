@@ -24,3 +24,13 @@ Scaffold inicial do aplicativo multi-tenant da Novaq.
 ## Ambiente
 
 Copie `.env.example` para `.env` e preencha os valores antes de conectar a um banco real.
+
+As senhas de seed presentes no exemplo são exclusivas para desenvolvimento local. Defina valores próprios antes de executar o seed em qualquer ambiente compartilhado.
+
+Para subir o PostgreSQL local:
+
+```bash
+docker compose up -d postgres
+npm run db:push
+npm run db:seed
+```

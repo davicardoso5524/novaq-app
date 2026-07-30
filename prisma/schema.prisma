@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GlobalRole {
+  SUPERADMIN
+  USER
+}
+
+enum TenantStatus {
+  CONFIGURING
+  ACTIVE
+  PAUSED
+  SUSPENDED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+model Plan {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  price     Decimal  @db.Decimal(10, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  tenants Tenant[]
+
+  @@map("plans")
+}
+
+model Tenant {
+  id           String       @id @default(cuid())
+  slug         String       @unique
+  name         String
+  status       TenantStatus @default(CONFIGURING)
+  publicDomain String?      @unique
+  subdomain    String       @unique
+  planId       String?
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @db.Timestamptz(3)
+  deletedAt    DateTime?    @db.Timestamptz(3)
+
+  plan        Plan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  memberships Membership[]
+  mediaAssets MediaAsset[]
+  auditLogs   AuditLog[]
+
+  @@index([planId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("tenants")
+}
+
+model User {
+  id             String     @id @default(cuid())
+  name           String
+  email          String     @unique
+  hashedPassword String
+  role           GlobalRole @default(USER)
+  ativo          Boolean    @default(true)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  memberships Membership[]
+  auditLogs   AuditLog[]
+
+  @@index([ativo])
+  @@map("users")
+}
+
+model Membership {
+  id        String           @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      MembershipRole
+  status    MembershipStatus @default(PENDING)
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@index([tenantId, status])
+  @@map("memberships")
+}
+
+model MediaAsset {
+  id         String    @id @default(cuid())
+  tenantId   String
+  storageKey String
+  url        String
+  fileName   String
+  mimeType   String
+  sizeBytes  BigInt
+  altText    String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt  DateTime? @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, storageKey])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, deletedAt])
+  @@map("media_assets")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entity, entityId])
+  @@map("audit_logs")
+}
