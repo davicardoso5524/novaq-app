@@ -1,4 +1,5 @@
-import { GlobalRole, TenantStatus } from "@prisma/client";
+import { GlobalRole, ProductStatus, TenantStatus } from "@prisma/client";
+import { loadPublicStore } from "../src/lib/catalog/load-public-store";
 import { prisma } from "../src/lib/prisma";
 import { resolveTenantFromHost } from "../src/lib/tenant/resolve";
 import { tenantFilter } from "../src/lib/tenant/scoped-repository";
@@ -34,12 +35,37 @@ async function verifyIsolationTransaction() {
         }),
       ]);
 
-      await Promise.all([
-        transaction.auditLog.create({
-          data: { tenantId: tenantA.id, action: "verify.a", entity: "Verification" },
+      const [categoryA, categoryB] = await Promise.all([
+        transaction.category.create({
+          data: { tenantId: tenantA.id, name: "Categoria A", slug: "categoria-a" },
         }),
-        transaction.auditLog.create({
-          data: { tenantId: tenantB.id, action: "verify.b", entity: "Verification" },
+        transaction.category.create({
+          data: { tenantId: tenantB.id, name: "Categoria B", slug: "categoria-b" },
+        }),
+      ]);
+
+      await Promise.all([
+        transaction.product.create({
+          data: {
+            tenantId: tenantA.id,
+            categoryId: categoryA.id,
+            name: "Produto A",
+            slug: "produto-a",
+            price: "10.00",
+            status: ProductStatus.PUBLISHED,
+            publishedAt: new Date(),
+          },
+        }),
+        transaction.product.create({
+          data: {
+            tenantId: tenantB.id,
+            categoryId: categoryB.id,
+            name: "Produto B",
+            slug: "produto-b",
+            price: "20.00",
+            status: ProductStatus.PUBLISHED,
+            publishedAt: new Date(),
+          },
         }),
       ]);
 
@@ -50,13 +76,25 @@ async function verifyIsolationTransaction() {
         membership: null,
         isSuperadmin: true,
       });
-      const [recordsA, recordsB] = await Promise.all([
-        transaction.auditLog.findMany({ where: tenantFilter(context(tenantA)) }),
-        transaction.auditLog.findMany({ where: tenantFilter(context(tenantB)) }),
+      const [productsA, productsB] = await Promise.all([
+        transaction.product.findMany({
+          where: tenantFilter(context(tenantA)),
+          select: { slug: true },
+        }),
+        transaction.product.findMany({
+          where: tenantFilter(context(tenantB)),
+          select: { slug: true },
+        }),
       ]);
 
-      assert(recordsA.length === 1 && recordsA[0].action === "verify.a", "Tenant A recebeu dados cruzados.");
-      assert(recordsB.length === 1 && recordsB[0].action === "verify.b", "Tenant B recebeu dados cruzados.");
+      assert(
+        productsA.length === 1 && productsA[0].slug === "produto-a",
+        "Tenant A recebeu produtos cruzados.",
+      );
+      assert(
+        productsB.length === 1 && productsB[0].slug === "produto-b",
+        "Tenant B recebeu produtos cruzados.",
+      );
       isolationVerified = true;
       throw new VerificationRollback();
     });
@@ -87,12 +125,59 @@ async function main() {
   console.log("✓ Superadmin, owner e membership conferidos");
 
   const baseDomain = process.env.PLATFORM_CATALOG_BASE_DOMAIN ?? "localhost";
-  const resolved = await resolveTenantFromHost(`${tenant.subdomain}.${baseDomain}:3002`);
+  const demoHost = `${tenant.subdomain}.${baseDomain}:3002`;
+  const resolved = await resolveTenantFromHost(demoHost);
   assert(resolved?.id === tenant.id, "Resolução do subdomínio seed falhou.");
   console.log("✓ Resolução de tenant por host conferida");
 
+  const [theme, categoryCount, productRecords, publicStore] = await Promise.all([
+    prisma.storeTheme.findFirst({
+      where: { tenantId: tenant.id, publishedAt: { not: null, lte: new Date() } },
+      select: { template: true, publishedAt: true },
+    }),
+    prisma.category.count({ where: { tenantId: tenant.id, active: true } }),
+    prisma.product.findMany({
+      where: { tenantId: tenant.id },
+      select: {
+        slug: true,
+        status: true,
+        deletedAt: true,
+        publishedAt: true,
+        category: { select: { active: true } },
+      },
+    }),
+    loadPublicStore(demoHost),
+  ]);
+
+  assert(theme?.template === "MODABELLA" && theme.publishedAt, "Tema ModaBella publicado não encontrado.");
+  assert(categoryCount > 0, "Categoria ModaBella ativa não encontrada.");
+  assert(publicStore?.theme?.template === "MODABELLA", "DTO público ModaBella não foi carregado.");
+  assert(publicStore.categories.length > 0 && publicStore.products.length > 0, "DTO público sem catálogo.");
+  const verificationTime = new Date();
+  assert(
+    publicStore.products.every((publicProduct) =>
+      productRecords.some(
+        (record) =>
+          record.slug === publicProduct.slug &&
+          record.status === ProductStatus.PUBLISHED &&
+          !record.deletedAt &&
+          record.publishedAt !== null &&
+          record.publishedAt <= verificationTime &&
+          record.category.active,
+      ),
+    ),
+    "DTO público contém produto em rascunho ou indisponível.",
+  );
+  const serializedPublicStore = JSON.stringify(publicStore);
+  assert(
+    !serializedPublicStore.includes("draftConfig") &&
+      !serializedPublicStore.includes("publishedConfig"),
+    "DTO público expôs configuração administrativa.",
+  );
+  console.log("✓ Tema, catálogo ModaBella e DTO público sem rascunhos conferidos");
+
   await verifyIsolationTransaction();
-  console.log("✓ Consultas de dois tenants permaneceram isoladas e foram revertidas");
+  console.log("✓ Produtos de dois tenants permaneceram isolados e foram revertidos");
 }
 
 main()

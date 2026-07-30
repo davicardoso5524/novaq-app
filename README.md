@@ -1,6 +1,6 @@
-# plataforma-multitenant
+# Novaq App
 
-Fundação do aplicativo multi-tenant da Novaq, isolada dos sites e catálogos existentes.
+Aplicativo multi-tenant da Novaq para administrar e publicar catálogos usando uma única base PostgreSQL com isolamento por tenant.
 
 ## O que este pacote entrega
 
@@ -20,7 +20,7 @@ Fundação do aplicativo multi-tenant da Novaq, isolada dos sites e catálogos e
 - `npm run db:generate`
 - `npm run db:push`
 - `npm run db:seed`
-- `npm run verify:foundation` — valida banco, seed, host e isolamento entre tenants
+- `npm run verify:foundation` — valida banco, seed, catálogo público e isolamento entre tenants
 
 ## Ambiente
 
@@ -46,7 +46,7 @@ npm run db:seed
 npm run verify:foundation
 ```
 
-Inicie o painel em seguida:
+Inicie o aplicativo em seguida:
 
 ```bash
 npm run dev
@@ -54,7 +54,9 @@ npm run dev
 
 - Painel: `http://localhost:3002/painel`
 - Studio de Aparência: `http://localhost:3002/painel/aparencia`
-- Host de catálogo usado na verificação: `modabella-demo.localhost:3002`
+- Catálogo público ModaBella: `http://modabella-demo.localhost:3002`
+
+O host identifica o tenant do catálogo. Para testar outro tenant local, use o subdomínio cadastrado antes de `.localhost:3002`; o cliente não envia nem escolhe um `tenantId` público.
 
 ## Contas locais do seed
 
@@ -73,4 +75,4 @@ npm run build
 npm run verify:foundation
 ```
 
-O verificador cria dois tenants e registros temporários dentro de uma transação que é revertida ao final; assim ele prova o escopo sem deixar dados de teste no banco.
+O verificador confirma o tema publicado, as categorias e os produtos do seed ModaBella, confere que o DTO público não contém rascunhos e consulta produtos de dois tenants temporários. Toda a prova de isolamento acontece em uma transação revertida, sem deixar dados de teste no banco.
