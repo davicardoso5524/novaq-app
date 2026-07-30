@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -40,6 +41,10 @@ type CartContextValue = {
   clearCart: () => void;
 };
 
+type CartAddResult = { items: CartItem[]; added: boolean };
+
+export const UNTRACKED_INVENTORY_MAX_QUANTITY = 99;
+
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function cartStorageKey(tenantSlug: string): string {
@@ -61,7 +66,21 @@ function resolveCurrentItem(
   quantity: number,
 ): CartItem | null {
   const product = products.find((candidate) => candidate.slug === slug);
-  if (!product || !variantId) return null;
+  if (!product) return null;
+
+  if (!product.variants.length) {
+    if (variantId !== undefined) return null;
+    return {
+      productId: product.slug,
+      slug: product.slug,
+      name: product.name,
+      unitPrice: moneyToCents(product.price),
+      quantity: Math.min(Math.max(1, quantity), UNTRACKED_INVENTORY_MAX_QUANTITY),
+      maxQuantity: UNTRACKED_INVENTORY_MAX_QUANTITY,
+    };
+  }
+
+  if (!variantId) return null;
 
   const variant = product.variants.find(
     (candidate) => candidate.sku === variantId && candidate.stock > 0,
@@ -126,18 +145,48 @@ export function addOrIncrementCartItem(
   variantId: string | undefined,
   quantity = 1,
 ): CartItem[] {
-  if (!Number.isSafeInteger(quantity) || quantity < 1) return items;
+  return addCartItemWithResult(items, products, slug, variantId, quantity).items;
+}
+
+export function addCartItemWithResult(
+  items: CartItem[],
+  products: PublicProduct[],
+  slug: string,
+  variantId: string | undefined,
+  quantity = 1,
+): CartAddResult {
+  if (!Number.isSafeInteger(quantity) || quantity < 1) return { items, added: false };
   const incoming = resolveCurrentItem(products, slug, variantId, quantity);
-  if (!incoming) return items;
+  if (!incoming) return { items, added: false };
 
   const existing = items.find((item) => sameIdentity(item, slug, variantId));
-  if (!existing) return [...items, incoming];
+  if (!existing) return { items: [...items, incoming], added: true };
 
-  return items.map((item) =>
-    sameIdentity(item, slug, variantId)
-      ? { ...incoming, quantity: Math.min(item.quantity + quantity, incoming.maxQuantity) }
-      : item,
+  const nextQuantity = Math.min(
+    existing.quantity + incoming.quantity,
+    incoming.maxQuantity,
   );
+  if (nextQuantity === existing.quantity) return { items, added: false };
+
+  return {
+    added: true,
+    items: items.map((item) =>
+      sameIdentity(item, slug, variantId)
+        ? { ...incoming, quantity: nextQuantity }
+        : item,
+    ),
+  };
+}
+
+export function resolveHydrationResult(
+  currentItems: CartItem[],
+  restoredItems: CartItem[],
+  mutationVersionAtStart: number,
+  currentMutationVersion: number,
+): CartItem[] {
+  return mutationVersionAtStart === currentMutationVersion
+    ? restoredItems
+    : currentItems;
 }
 
 export function CartProvider({
@@ -149,12 +198,29 @@ export function CartProvider({
 }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const itemsRef = useRef<CartItem[]>([]);
+  const hydratedRef = useRef(false);
+  const mutationVersionRef = useRef(0);
 
   useEffect(() => {
     let active = true;
+    const mutationVersionAtStart = mutationVersionRef.current;
     queueMicrotask(() => {
       if (!active) return;
-      setItems(loadCartFromStorage(window.localStorage, catalog.tenant.slug, catalog.products));
+      const restoredItems = loadCartFromStorage(
+        window.localStorage,
+        catalog.tenant.slug,
+        catalog.products,
+      );
+      const nextItems = resolveHydrationResult(
+        itemsRef.current,
+        restoredItems,
+        mutationVersionAtStart,
+        mutationVersionRef.current,
+      );
+      itemsRef.current = nextItems;
+      setItems(nextItems);
+      hydratedRef.current = true;
       setHydrated(true);
     });
     return () => {
@@ -177,11 +243,18 @@ export function CartProvider({
 
   const addItem = useCallback(
     (slug: string, variantId?: string, quantity = 1) => {
-      const valid = resolveCurrentItem(catalog.products, slug, variantId, quantity);
-      if (!valid) return false;
-      setItems((current) =>
-        addOrIncrementCartItem(current, catalog.products, slug, variantId, quantity),
+      if (!hydratedRef.current) return false;
+      const result = addCartItemWithResult(
+        itemsRef.current,
+        catalog.products,
+        slug,
+        variantId,
+        quantity,
       );
+      if (!result.added) return false;
+      itemsRef.current = result.items;
+      mutationVersionRef.current += 1;
+      setItems(result.items);
       return true;
     },
     [catalog.products],
@@ -189,22 +262,41 @@ export function CartProvider({
 
   const setQuantity = useCallback(
     (slug: string, variantId: string | undefined, quantity: number) => {
-      if (!Number.isSafeInteger(quantity)) return;
-      if (quantity < 1) {
-        setItems((current) => current.filter((item) => !sameIdentity(item, slug, variantId)));
-        return;
-      }
-      setItems((current) => current.map((item) =>
-        sameIdentity(item, slug, variantId)
-          ? { ...item, quantity: Math.min(quantity, item.maxQuantity) }
-          : item,
-      ));
+      if (!hydratedRef.current || !Number.isSafeInteger(quantity)) return;
+      const nextItems = quantity < 1
+        ? itemsRef.current.filter((item) => !sameIdentity(item, slug, variantId))
+        : itemsRef.current.map((item) =>
+            sameIdentity(item, slug, variantId)
+              ? { ...item, quantity: Math.min(quantity, item.maxQuantity) }
+              : item,
+          );
+      if (
+        nextItems.length === itemsRef.current.length &&
+        nextItems.every((item, index) => item === itemsRef.current[index])
+      ) return;
+      itemsRef.current = nextItems;
+      mutationVersionRef.current += 1;
+      setItems(nextItems);
     },
     [],
   );
 
   const removeItem = useCallback((slug: string, variantId?: string) => {
-    setItems((current) => current.filter((item) => !sameIdentity(item, slug, variantId)));
+    if (!hydratedRef.current) return;
+    const nextItems = itemsRef.current.filter(
+      (item) => !sameIdentity(item, slug, variantId),
+    );
+    if (nextItems.length === itemsRef.current.length) return;
+    itemsRef.current = nextItems;
+    mutationVersionRef.current += 1;
+    setItems(nextItems);
+  }, []);
+
+  const clearCart = useCallback(() => {
+    if (!hydratedRef.current || !itemsRef.current.length) return;
+    itemsRef.current = [];
+    mutationVersionRef.current += 1;
+    setItems([]);
   }, []);
 
   const value = useMemo<CartContextValue>(() => ({
@@ -215,8 +307,8 @@ export function CartProvider({
     addItem,
     setQuantity,
     removeItem,
-    clearCart: () => setItems([]),
-  }), [addItem, hydrated, items, removeItem, setQuantity]);
+    clearCart,
+  }), [addItem, clearCart, hydrated, items, removeItem, setQuantity]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

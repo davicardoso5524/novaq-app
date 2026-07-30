@@ -4,12 +4,15 @@ import { describe, expect, it } from "vitest";
 import type { PublicProduct, PublicStoreData } from "../src/lib/catalog/types";
 import {
   addOrIncrementCartItem,
+  addCartItemWithResult,
   CartProvider,
   cartStorageKey,
   loadCartFromStorage,
+  resolveHydrationResult,
   type CartItem,
 } from "../src/components/storefront/cart-provider";
 import { CartPageContent } from "../src/components/storefront/cart-page-content";
+import { ProductPurchaseForm } from "../src/templates/modabella/components/product-purchase-form";
 import {
   EmptyWhatsAppQuoteError,
   buildWhatsAppQuote,
@@ -32,6 +35,17 @@ const products: PublicProduct[] = [
     ],
   },
 ];
+
+const productWithoutVariants: PublicProduct = {
+  name: "Vale-presente",
+  slug: "vale-presente",
+  description: null,
+  categorySlug: "presentes",
+  price: "50.00",
+  compareAtPrice: null,
+  images: [],
+  variants: [],
+};
 
 describe("tenant cart and WhatsApp quote", () => {
   it("converts decimal money to integer cents without floating-point addition", () => {
@@ -125,6 +139,31 @@ describe("tenant cart and WhatsApp quote", () => {
     expect(html).not.toContain("wa.me");
   });
 
+  it("keeps the add action disabled until localStorage hydration completes", () => {
+    const catalog: PublicStoreData = {
+      tenant: { name: "Moda Bella", slug: "modabella-demo" },
+      theme: { template: "MODABELLA", config: {} },
+      sections: [],
+      categories: [],
+      products,
+      settings: { name: "Moda Bella", whatsAppNumber: null, texts: {} },
+    };
+    const html = renderToStaticMarkup(
+      createElement(
+        CartProvider,
+        { catalog },
+        createElement(ProductPurchaseForm, {
+          productSlug: "vestido-aurea",
+          basePrice: "189.90",
+          compareAtPrice: null,
+          variants: products[0].variants,
+        }),
+      ),
+    );
+
+    expect(html).toContain('disabled="" type="submit"');
+  });
+
   it("uses an isolated localStorage key for each tenant", () => {
     expect(cartStorageKey("modabella-demo")).toBe("novaq:cart:modabella-demo:v1");
     expect(cartStorageKey("outra-loja")).not.toBe(cartStorageKey("modabella-demo"));
@@ -190,5 +229,57 @@ describe("tenant cart and WhatsApp quote", () => {
       quantity: 1,
       unitPrice: 18990,
     });
+  });
+
+  it("supports products without variants using base price and untracked inventory policy", () => {
+    const result = addCartItemWithResult(
+      [],
+      [...products, productWithoutVariants],
+      "vale-presente",
+      undefined,
+      1,
+    );
+
+    expect(result.added).toBe(true);
+    expect(result.items).toEqual([
+      {
+        productId: "vale-presente",
+        slug: "vale-presente",
+        name: "Vale-presente",
+        unitPrice: 5000,
+        quantity: 1,
+        maxQuantity: 99,
+      },
+    ]);
+  });
+
+  it("still requires an in-stock SKU when a product defines variants", () => {
+    const result = addCartItemWithResult([], products, "vestido-aurea", undefined, 1);
+
+    expect(result.added).toBe(false);
+    expect(result.items).toEqual([]);
+  });
+
+  it("returns false and preserves state identity when an item already reached its limit", () => {
+    const full = addCartItemWithResult([], products, "vestido-aurea", "AUREA-P", 2);
+    const rejected = addCartItemWithResult(
+      full.items,
+      products,
+      "vestido-aurea",
+      "AUREA-P",
+      1,
+    );
+
+    expect(rejected.added).toBe(false);
+    expect(rejected.items).toBe(full.items);
+    expect(rejected.items[0].quantity).toBe(2);
+  });
+
+  it("does not overwrite a cart mutation that happened while hydration was pending", () => {
+    const restored = addCartItemWithResult([], products, "vestido-aurea", "AUREA-P", 1).items;
+    const current = addCartItemWithResult([], products, "vestido-aurea", "AUREA-M", 1).items;
+
+    expect(resolveHydrationResult(current, restored, 0, 1)).toBe(current);
+    expect(resolveHydrationResult([], restored, 0, 0)).toBe(restored);
   });
 });
