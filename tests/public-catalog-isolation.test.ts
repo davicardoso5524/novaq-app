@@ -45,6 +45,7 @@ vi.mock("../src/lib/tenant/require-context", async () => {
 import { loadPublicStore } from "../src/lib/catalog/load-public-store";
 import { GET as getAppearance, PATCH as patchAppearance } from "../src/app/api/tenants/[tenantId]/appearance/route";
 import { POST as publishAppearance } from "../src/app/api/tenants/[tenantId]/appearance/publish/route";
+import { TenantAccessError } from "../src/lib/tenant/types";
 
 const now = new Date("2026-07-30T12:00:00.000Z");
 const modaBella = {
@@ -783,5 +784,46 @@ describe("public catalog host isolation", () => {
       ctaHref: "#colecao",
       imageUrl: "https://cdn.example.com/hero-new.jpg",
     });
+  });
+
+  it("rejects PATCH /appearance when the authenticated session targets another tenant", async () => {
+    requireTenantContext.mockRejectedValueOnce(
+      new TenantAccessError(
+        "TENANT_FORBIDDEN",
+        "Usuário não possui vínculo ativo com este tenant.",
+      ),
+    );
+
+    const response = await patchAppearance(
+      new Request(`http://localhost/api/tenants/${otherTenant.id}/appearance`, {
+        method: "PATCH",
+        body: JSON.stringify(buildDraft()),
+      }),
+      { params: Promise.resolve({ tenantId: otherTenant.id }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(database.storeTheme.upsert).not.toHaveBeenCalled();
+    expect(database.storeSection.createMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects POST /appearance/publish when the authenticated session targets another tenant", async () => {
+    requireTenantContext.mockRejectedValueOnce(
+      new TenantAccessError(
+        "TENANT_FORBIDDEN",
+        "Usuário não possui vínculo ativo com este tenant.",
+      ),
+    );
+
+    const response = await publishAppearance(
+      new Request(`http://localhost/api/tenants/${otherTenant.id}/appearance/publish`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ tenantId: otherTenant.id }) },
+    );
+
+    expect(response.status).toBe(403);
+    expect(database.storeTheme.upsert).not.toHaveBeenCalled();
+    expect(database.storeSection.createMany).not.toHaveBeenCalled();
   });
 });
