@@ -11,7 +11,8 @@ type StoreStyle = CSSProperties & { "--store-accent": string };
 
 export function ModaBellaStore({ data }: { data: PublicStoreData }) {
   const hero = data.sections.find((section): section is PublicHeroSection => section.type === "HERO");
-  const categoryTitle = data.sections.find((section) => section.type === "CATEGORIES")?.content.title ?? "Categorias";
+  const categoriesSection = data.sections.find((section) => section.type === "CATEGORIES");
+  const categoryTitle = categoriesSection?.content.title ?? "Categorias";
   const feed = data.sections.find((section) => section.type === "PRODUCT_FEED");
   const products = data.products.slice(0, feed?.content.limit ?? data.products.length);
   const firstCategorySlug = data.categories[0]?.slug;
@@ -30,12 +31,14 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
           section={hero}
           fallbackHref={heroFallbackHref}
         />
-        <CategoryStrip categories={data.categories} title={categoryTitle} />
-        <ProductGrid
-          products={products}
-          title={feed?.content.title ?? "Destaques"}
-          categorySlug={firstCategorySlug}
-        />
+        {categoriesSection ? <CategoryStrip categories={data.categories} title={categoryTitle} /> : null}
+        {feed ? (
+          <ProductGrid
+            products={products}
+            title={feed.content.title ?? "Destaques"}
+            categorySlug={firstCategorySlug}
+          />
+        ) : null}
       </main>
       <footer className="modabella-footer">
         <strong>{data.settings.name}</strong>

@@ -1,15 +1,98 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { AppearanceStudio } from "./appearance-studio";
 import { auth } from "@/lib/auth/config";
+import type { PublicStoreData } from "@/lib/catalog/types";
 import { loadPanelState } from "@/lib/panel/load-state";
+import { prisma } from "@/lib/prisma";
 
 type PageProps = { searchParams: Promise<{ tenantId?: string }> };
+
+async function loadAppearancePreviewCatalog(tenantId: string): Promise<Pick<PublicStoreData, "categories" | "products">> {
+  const [categories, products] = await Promise.all([
+    prisma.category.findMany({
+      where: { tenantId, active: true },
+      orderBy: { position: "asc" },
+      select: {
+        name: true,
+        slug: true,
+        position: true,
+      },
+    }),
+    prisma.product.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        category: { is: { active: true } },
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: 12,
+      select: {
+        name: true,
+        slug: true,
+        description: true,
+        price: true,
+        compareAtPrice: true,
+        category: { select: { slug: true } },
+        variants: {
+          where: { tenantId, active: true },
+          select: {
+            sku: true,
+            size: true,
+            color: true,
+            stock: true,
+            price: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+        media: {
+          where: { tenantId, mediaAsset: { is: { deletedAt: null } } },
+          orderBy: { position: "asc" },
+          select: {
+            mediaAsset: {
+              select: {
+                url: true,
+                altText: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    categories,
+    products: products.map((product) => ({
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      categorySlug: product.category.slug,
+      price: product.price.toString(),
+      compareAtPrice: product.compareAtPrice?.toString() ?? null,
+      variants: product.variants.map((variant) => ({
+        sku: variant.sku,
+        size: variant.size,
+        color: variant.color,
+        stock: variant.stock,
+        price: variant.price?.toString() ?? null,
+      })),
+      images: product.media.map(({ mediaAsset }) => ({
+        url: mediaAsset.url,
+        altText: mediaAsset.altText,
+      })),
+    })),
+  };
+}
 
 export default async function AppearancePage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session?.user?.ativo) redirect("/login");
   const { tenantId } = await searchParams;
   const state = await loadPanelState(session.user, tenantId);
+  const previewCatalog = state.activeTenant
+    ? await loadAppearancePreviewCatalog(state.activeTenant.id)
+    : { categories: [], products: [] };
 
   return (
     <AppShell
@@ -19,20 +102,14 @@ export default async function AppearancePage({ searchParams }: PageProps) {
       activeSection="appearance"
       warning={state.requestedUnavailable ? "A loja solicitada não está mais disponível para sua conta. Exibimos sua primeira loja ativa." : undefined}
     >
-      <div className="max-w-4xl">
-        <p className="text-sm font-semibold text-violet-700">Studio de Aparência</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Aparência da loja</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
-          Este é o ponto de entrada protegido do Studio dentro do mesmo painel, sessão e tenant. O editor de templates será conectado aqui na próxima fase.
-        </p>
-        <section className="mt-8 rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-6 shadow-sm sm:p-8">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-700 text-xl text-white" aria-hidden="true">◐</div>
-          <h2 className="mt-5 text-xl font-bold text-slate-950">Módulo em construção</h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
-            Os quatro templates compartilharão o mesmo contrato de dados. Trocar o visual não duplicará catálogo, produtos ou lógica administrativa.
-          </p>
+      {state.activeTenant ? (
+        <AppearanceStudio tenantId={state.activeTenant.id} catalog={previewCatalog} />
+      ) : (
+        <section className="mx-auto max-w-xl rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+          <h1 className="text-2xl font-bold text-slate-950">Nenhuma loja disponível</h1>
+          <p className="mt-3 text-slate-600">Sua conta ainda não possui uma membership ativa para abrir o Studio.</p>
         </section>
-      </div>
+      )}
     </AppShell>
   );
 }
