@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { useCart } from "../../../components/storefront/cart-provider";
 import type { PublicProductVariant } from "../../../lib/catalog/types";
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -19,8 +20,10 @@ export function ProductPurchaseForm({
   compareAtPrice: string | null;
   variants: PublicProductVariant[];
 }) {
+  const { addItem } = useCart();
   const availableVariants = variants.filter((variant) => variant.stock > 0);
   const [selectedSku, setSelectedSku] = useState(availableVariants[0]?.sku ?? "");
+  const [feedback, setFeedback] = useState("");
   const selectedVariant =
     availableVariants.find((variant) => variant.sku === selectedSku) ??
     availableVariants[0];
@@ -33,8 +36,18 @@ export function ProductPurchaseForm({
     0,
   );
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedVariant) {
+      setFeedback("Escolha uma opção disponível.");
+      return;
+    }
+    const added = addItem(productSlug, selectedVariant.sku);
+    setFeedback(added ? "Produto adicionado ao carrinho." : "Não foi possível adicionar este produto.");
+  }
+
   return (
-    <form action="/carrinho" className="mt-5" method="get">
+    <form className="mt-5" onSubmit={handleSubmit}>
       <input name="produto" type="hidden" value={productSlug} />
       {selectedVariant ? (
         <>
@@ -100,6 +113,9 @@ export function ProductPurchaseForm({
       >
         Adicionar ao carrinho
       </button>
+      <p className="mt-3 min-h-5 text-center text-sm font-semibold text-[var(--store-accent)]" aria-live="polite">
+        {feedback}
+      </p>
     </form>
   );
 }

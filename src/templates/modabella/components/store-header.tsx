@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CartCount } from "../../../components/storefront/cart-count";
 import { CartIcon, SearchIcon } from "./icons";
 
 export function StoreHeader({ name }: { name: string }) {
@@ -12,8 +13,9 @@ export function StoreHeader({ name }: { name: string }) {
           <Link className="modabella-icon-button" href="/busca" aria-label="Buscar produtos">
             <SearchIcon />
           </Link>
-          <Link className="modabella-icon-button" href="/carrinho" aria-label="Abrir carrinho">
+          <Link className="modabella-icon-button modabella-cart-link" href="/carrinho" aria-label="Abrir carrinho">
             <CartIcon />
+            <CartCount />
           </Link>
         </nav>
       </div>

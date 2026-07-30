@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { CartProvider } from "../../components/storefront/cart-provider";
 import type { PublicHeroSection, PublicStoreData } from "../../lib/catalog/types";
 import { BottomNavigation } from "./components/bottom-navigation";
 import { CategoryStrip } from "./components/category-strip";
@@ -20,6 +21,7 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
   const style: StoreStyle = { "--store-accent": data.theme?.config.accentColor ?? "#6C3CE0" };
 
   return (
+    <CartProvider catalog={data}>
     <div className="modabella-store" style={style}>
       {data.settings.texts.announcement ? <p className="modabella-announcement">{data.settings.texts.announcement}</p> : null}
       <StoreHeader name={data.settings.name} />
@@ -46,5 +48,6 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
         storeName={data.settings.name}
       />
     </div>
+    </CartProvider>
   );
 }

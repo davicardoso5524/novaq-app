@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { CartProvider } from "../../../components/storefront/cart-provider";
 import type { PublicStoreData } from "../../../lib/catalog/types";
 import { BottomNavigation } from "./bottom-navigation";
 import type { BottomNavigationItem } from "./bottom-navigation";
@@ -25,6 +26,7 @@ export function CatalogPageShell({
   const categoryDestinationSlug = currentCategorySlug ?? data.categories[0]?.slug;
 
   return (
+    <CartProvider catalog={data}>
     <div className="modabella-store" style={style}>
       {data.settings.texts.announcement ? (
         <p className="modabella-announcement">
@@ -46,5 +48,6 @@ export function CatalogPageShell({
         />
       )}
     </div>
+    </CartProvider>
   );
 }
