@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { PublicHeroSection } from "../../../lib/catalog/types";
+import { sanitizePublicImageUrl } from "../../../lib/catalog/public-image-url";
 
 function safeStoreHref(value: string | undefined, fallbackHref: string): string {
   if (value?.startsWith("#")) return value;
@@ -16,14 +17,15 @@ export function HeroSection({
   fallbackHref: string;
 }) {
   const content = section?.content;
-  const imageUrl = content?.imageUrl;
+  const imageUrl = sanitizePublicImageUrl(content?.imageUrl);
+  const imageAlt = content?.imageAlt ?? "";
   return (
     <section className="modabella-hero" aria-labelledby="modabella-hero-title">
       {imageUrl ? (
         <Image
           className="modabella-hero__image"
           src={imageUrl}
-          alt={content.imageAlt ?? ""}
+          alt={imageAlt}
           fill
           sizes="(max-width: 700px) 100vw, 1180px"
           loading="eager"

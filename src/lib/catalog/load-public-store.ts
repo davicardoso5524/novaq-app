@@ -2,6 +2,7 @@ import { ProductStatus, StoreSectionType, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { resolveTenantFromHost } from "../tenant/resolve";
 import type { PublicStoreData, PublicStoreSection } from "./types";
+import { sanitizePublicImageUrl } from "./public-image-url";
 
 function readPublicString(
   config: Prisma.JsonValue,
@@ -45,7 +46,10 @@ function mapPublicSection(section: {
   const title = optionalValue("title", readPublicString(section.content, "title"));
 
   switch (section.type) {
-    case StoreSectionType.HERO:
+    case StoreSectionType.HERO: {
+      const imageUrl = sanitizePublicImageUrl(
+        readPublicString(section.content, "imageUrl"),
+      );
       return {
         type: section.type,
         position: section.position,
@@ -54,10 +58,11 @@ function mapPublicSection(section: {
           ...optionalValue("subtitle", readPublicString(section.content, "subtitle")),
           ...optionalValue("ctaLabel", readPublicString(section.content, "ctaLabel")),
           ...optionalValue("ctaHref", readPublicString(section.content, "ctaHref")),
-          ...optionalValue("imageUrl", readPublicString(section.content, "imageUrl")),
+          ...optionalValue("imageUrl", imageUrl),
           ...optionalValue("imageAlt", readPublicString(section.content, "imageAlt")),
         },
       };
+    }
     case StoreSectionType.CATEGORIES:
       return { type: section.type, position: section.position, content: title };
     case StoreSectionType.PRODUCT_FEED:

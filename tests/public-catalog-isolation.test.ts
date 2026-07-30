@@ -272,6 +272,33 @@ describe("public catalog host isolation", () => {
     ]);
   });
 
+  it("does not expose an unsafe hero image URL from stored section content", async () => {
+    database.storeSection.findMany.mockResolvedValueOnce([
+      {
+        type: "HERO",
+        position: 0,
+        content: {
+          title: "Hero seguro",
+          imageUrl: "javascript:alert(1)",
+          imageAlt: "Texto alternativo preservado",
+        },
+      },
+    ]);
+
+    const store = await loadPublicStore("modabella.example.com");
+
+    expect(store?.sections).toEqual([
+      {
+        type: "HERO",
+        position: 0,
+        content: {
+          title: "Hero seguro",
+          imageAlt: "Texto alternativo preservado",
+        },
+      },
+    ]);
+  });
+
   it("returns null for an unknown host", async () => {
     resolveTenantFromHost.mockResolvedValueOnce(null);
 

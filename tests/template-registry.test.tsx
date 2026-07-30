@@ -181,4 +181,24 @@ describe("shared storefront template registry", () => {
     expect(html).toContain('href="#novidades"');
     expect(html).not.toContain('href="/categorias"');
   });
+
+  it("defends direct DTO rendering from an unsafe hero image URL", () => {
+    const unsafeImageCatalog: PublicStoreData = {
+      ...catalog,
+      sections: catalog.sections.map((section) =>
+        section.type === "HERO"
+          ? {
+              ...section,
+              content: { ...section.content, imageUrl: "javascript:alert(1)" },
+            }
+          : section,
+      ),
+    };
+
+    const html = renderToStaticMarkup(<>{renderStoreTemplate(unsafeImageCatalog)}</>);
+
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("modabella-hero__image");
+    expect(html).toContain(">MB</div>");
+  });
 });
