@@ -15,6 +15,8 @@ type AppearanceEditorProps = {
   isPublishing: boolean;
   validationMessage: string | null;
   notice: Notice | null;
+  previewTriggerRef?: React.MutableRefObject<HTMLButtonElement | null>;
+  showPreviewTrigger?: boolean;
   onOpenPreview: () => void;
   onSave: () => void;
   onPublish: () => void;
@@ -87,6 +89,8 @@ export function AppearanceEditor({
   isPublishing,
   validationMessage,
   notice,
+  previewTriggerRef,
+  showPreviewTrigger = true,
   onOpenPreview,
   onSave,
   onPublish,
@@ -106,13 +110,16 @@ export function AppearanceEditor({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={onOpenPreview}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 lg:hidden"
-          >
-            Preview da loja
-          </button>
+          {showPreviewTrigger ? (
+            <button
+              ref={previewTriggerRef}
+              type="button"
+              onClick={onOpenPreview}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700"
+            >
+              Preview da loja
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onSave}

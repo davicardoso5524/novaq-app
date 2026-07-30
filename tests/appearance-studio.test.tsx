@@ -115,12 +115,22 @@ function mockJsonResponse(body: unknown, init?: ResponseInit) {
   );
 }
 
+function setViewportWidth(width: number) {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
+  window.dispatchEvent(new Event("resize"));
+}
+
 describe("AppearanceStudio", () => {
   afterEach(() => {
     cleanup();
   });
 
   beforeEach(() => {
+    setViewportWidth(1440);
     vi.restoreAllMocks();
     vi.stubGlobal(
       "fetch",
@@ -176,6 +186,17 @@ describe("AppearanceStudio", () => {
     expect(screen.getAllByText("Nova coleção").length).toBeGreaterThan(0);
   });
 
+  it("keeps the preview available at 1024px without falling into a breakpoint gap", async () => {
+    setViewportWidth(1024);
+
+    render(<AppearanceStudio tenantId="tenant-modabella" catalog={previewCatalog} />);
+
+    await screen.findByRole("heading", { name: "Estúdio de Aparência" });
+
+    expect(screen.queryByRole("button", { name: "Preview da loja" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("appearance-phone-preview")).toBeInTheDocument();
+  });
+
   it("updates the phone preview live from the local draft without writing to the database", async () => {
     const user = userEvent.setup();
     render(<AppearanceStudio tenantId="tenant-modabella" catalog={previewCatalog} />);
@@ -216,6 +237,26 @@ describe("AppearanceStudio", () => {
     expect(screen.getByRole("button", { name: "Salvar rascunho" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Publicar alterações" })).toBeDisabled();
     expect(screen.getByRole("note")).toHaveTextContent("Seu papel permite apenas visualização");
+  });
+
+  it("moves focus into the mobile preview dialog, closes on Escape and restores focus to the trigger", async () => {
+    setViewportWidth(768);
+    const user = userEvent.setup();
+
+    render(<AppearanceStudio tenantId="tenant-modabella" catalog={previewCatalog} />);
+
+    const trigger = await screen.findByRole("button", { name: "Preview da loja" });
+    await user.click(trigger);
+
+    const closeButton = await screen.findByRole("button", { name: "Fechar" });
+    expect(closeButton).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Preview da loja" })).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveFocus();
   });
 
   it("saves draft and publishes with status feedback while actions are pending", async () => {

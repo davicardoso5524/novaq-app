@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppearanceEditor } from "@/components/appearance/appearance-editor";
 import { AppearancePreview } from "@/components/appearance/appearance-preview";
 import { TemplatePicker } from "@/components/appearance/template-picker";
@@ -79,6 +79,12 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const previewCloseRef = useRef<HTMLButtonElement | null>(null);
+
+  const showInlinePreview = viewportWidth >= 1024;
+  const showPreviewTrigger = viewportWidth < 1024;
 
   useEffect(() => {
     let active = true;
@@ -116,7 +122,34 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
     };
   }, [tenantId]);
 
+  useEffect(() => {
+    function handleResize() {
+      const nextWidth = window.innerWidth;
+      setViewportWidth(nextWidth);
+      if (nextWidth >= 1024) {
+        setIsPreviewOpen(false);
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPreviewOpen) return;
+    previewCloseRef.current?.focus();
+  }, [isPreviewOpen]);
+
   const validationMessage = useMemo(() => (draft ? validateDraft(draft) : null), [draft]);
+
+  function closePreviewDialog() {
+    setIsPreviewOpen(false);
+    window.requestAnimationFrame(() => {
+      previewTriggerRef.current?.focus();
+    });
+  }
 
   async function persistDraft() {
     if (!draft || validationMessage) return;
@@ -200,7 +233,7 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
 
   return (
     <>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)] xl:items-start">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,360px)] lg:items-start xl:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
         <div className="space-y-6">
           <TemplatePicker
             value={draft.template}
@@ -217,19 +250,35 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
             validationMessage={validationMessage}
             notice={notice}
             onOpenPreview={() => setIsPreviewOpen(true)}
+            previewTriggerRef={previewTriggerRef}
+            showPreviewTrigger={showPreviewTrigger}
             onSave={() => void persistDraft()}
             onPublish={() => void publishDraft()}
             onDraftChange={setDraft}
           />
         </div>
 
-        <aside className="hidden xl:sticky xl:top-24 xl:block">
-          <AppearancePreview draft={draft} catalog={catalog} />
-        </aside>
+        {showInlinePreview ? (
+          <aside className="lg:sticky lg:top-24">
+            <AppearancePreview draft={draft} catalog={catalog} />
+          </aside>
+        ) : null}
       </div>
 
       {isPreviewOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 xl:hidden">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 lg:hidden"
+          tabIndex={-1}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closePreviewDialog();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              closePreviewDialog();
+            }
+          }}
+        >
           <div
             role="dialog"
             aria-modal="true"
@@ -242,8 +291,9 @@ export function AppearanceStudio({ tenantId, catalog }: AppearanceStudioProps) {
                 <p className="text-sm text-slate-600">Visualização do draft atual.</p>
               </div>
               <button
+                ref={previewCloseRef}
                 type="button"
-                onClick={() => setIsPreviewOpen(false)}
+                onClick={closePreviewDialog}
                 className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-900"
               >
                 Fechar
