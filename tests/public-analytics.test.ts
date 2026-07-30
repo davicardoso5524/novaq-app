@@ -34,6 +34,26 @@ function analyticsRequest(body: unknown, host = "modabella-demo.localhost:3002")
   });
 }
 
+function streamedAnalyticsRequest(chunks: string[], onCancel: () => void) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    },
+    cancel() {
+      onCancel();
+    },
+  });
+
+  return new Request("http://localhost/api/public/analytics", {
+    method: "POST",
+    headers: { "content-type": "application/json", host: "modabella-demo.localhost:3002" },
+    body: stream,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
 describe("POST /api/public/analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,6 +89,62 @@ describe("POST /api/public/analytics", () => {
     );
 
     expect(response.status).toBe(422);
+    expect(database.pageView.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "//evil.example/collect?email=owner@modabella.local&token=secret",
+    "/produto?email=owner@modabella.local&token=secret",
+    "/produto#token-secret",
+    "/catalogo\\..\\painel",
+    "/catalogo/../painel",
+    "/%2e%2e/painel",
+    "/%2F%2Fevil.example/collect",
+    "/catalogo%5c..%5cpainel",
+    "/linha\ncontrole",
+  ])("rejects a path that is not a strict local pathname: %s", async (path) => {
+    const response = await POST(analyticsRequest({ event: "PAGE_VIEW", path }));
+
+    expect(response.status).toBe(422);
+    expect(database.pageView.create).not.toHaveBeenCalled();
+  });
+
+  it("returns 413 from Content-Length before parsing a body above 8 KiB", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/public/analytics", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          host: "modabella-demo.localhost:3002",
+          "content-length": "8193",
+        },
+        body: JSON.stringify({ event: "PAGE_VIEW", path: "/" }),
+      }),
+    );
+
+    expect(response.status).toBe(413);
+    expect(database.pageView.create).not.toHaveBeenCalled();
+  });
+
+  it("cancels a real headerless stream as soon as its body exceeds 8 KiB", async () => {
+    let canceled = false;
+    const request = streamedAnalyticsRequest(
+      [
+        '{"event":"PAGE_VIEW","path":"/","padding":"',
+        "x".repeat(4096),
+        "x".repeat(4096),
+        '"}',
+      ],
+      () => {
+        canceled = true;
+      },
+    );
+    expect(request.headers.get("content-length")).toBeNull();
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    expect(canceled).toBe(true);
     expect(database.pageView.create).not.toHaveBeenCalled();
   });
 
@@ -183,7 +259,7 @@ describe("POST /api/public/analytics", () => {
           "user-agent": "private-agent",
           "x-forwarded-for": "203.0.113.1",
         },
-        body: JSON.stringify({ event: "SEARCH", path: " /busca ", searchTerm: "  vestido rosa  " }),
+        body: JSON.stringify({ event: "SEARCH", path: "/busca", searchTerm: "  vestido rosa  " }),
       }),
     );
 
