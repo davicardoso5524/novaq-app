@@ -1,4 +1,4 @@
-import type { Prisma, StoreSectionType, TemplateKey } from "@prisma/client";
+import type { StoreSectionType, TemplateKey } from "@prisma/client";
 
 export type PublicTenant = {
   name: string;
@@ -12,11 +12,56 @@ export type PublicTheme = {
   };
 };
 
-export type PublicStoreSection = {
-  type: StoreSectionType;
+type PublicStoreSectionBase<
+  TType extends StoreSectionType,
+  TContent extends Record<string, unknown>,
+> = {
+  type: TType;
   position: number;
-  content: Prisma.JsonValue;
+  content: TContent;
 };
+
+export type PublicHeroSection = PublicStoreSectionBase<
+  "HERO",
+  {
+    title?: string;
+    subtitle?: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+  }
+>;
+
+export type PublicCategoriesSection = PublicStoreSectionBase<
+  "CATEGORIES",
+  { title?: string }
+>;
+
+export type PublicProductFeedSection = PublicStoreSectionBase<
+  "PRODUCT_FEED",
+  { title?: string; limit?: number }
+>;
+
+export type PublicPromotionsSection = PublicStoreSectionBase<
+  "PROMOTIONS",
+  {
+    title?: string;
+    subtitle?: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+  }
+>;
+
+export type PublicTestimonialsSection = PublicStoreSectionBase<
+  "TESTIMONIALS",
+  { title?: string }
+>;
+
+export type PublicStoreSection =
+  | PublicHeroSection
+  | PublicCategoriesSection
+  | PublicProductFeedSection
+  | PublicPromotionsSection
+  | PublicTestimonialsSection;
 
 export type PublicCategory = {
   name: string;

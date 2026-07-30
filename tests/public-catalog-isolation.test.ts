@@ -185,6 +185,76 @@ describe("public catalog host isolation", () => {
     });
   });
 
+  it("whitelists public content fields for every section type", async () => {
+    database.storeSection.findMany.mockResolvedValueOnce([
+      {
+        type: "HERO",
+        position: 0,
+        content: {
+          title: "Hero",
+          subtitle: "Subtitle",
+          ctaLabel: "Shop",
+          ctaHref: "#products",
+          tenantId: "tenant-other",
+        },
+      },
+      {
+        type: "CATEGORIES",
+        position: 1,
+        content: { title: "Categories", status: "DRAFT" },
+      },
+      {
+        type: "PRODUCT_FEED",
+        position: 2,
+        content: { title: "Products", limit: 12, admin: true },
+      },
+      {
+        type: "PROMOTIONS",
+        position: 3,
+        content: {
+          title: "Promotion",
+          subtitle: "This week",
+          ctaLabel: "View",
+          ctaHref: "/promotions",
+          draft: { internalNote: "hidden" },
+        },
+      },
+      {
+        type: "TESTIMONIALS",
+        position: 4,
+        content: { title: "Testimonials", admin: { ownerEmail: "owner@example.com" } },
+      },
+    ]);
+
+    const store = await loadPublicStore("modabella.example.com");
+
+    expect(store?.sections).toEqual([
+      {
+        type: "HERO",
+        position: 0,
+        content: {
+          title: "Hero",
+          subtitle: "Subtitle",
+          ctaLabel: "Shop",
+          ctaHref: "#products",
+        },
+      },
+      { type: "CATEGORIES", position: 1, content: { title: "Categories" } },
+      { type: "PRODUCT_FEED", position: 2, content: { title: "Products", limit: 12 } },
+      {
+        type: "PROMOTIONS",
+        position: 3,
+        content: {
+          title: "Promotion",
+          subtitle: "This week",
+          ctaLabel: "View",
+          ctaHref: "/promotions",
+        },
+      },
+      { type: "TESTIMONIALS", position: 4, content: { title: "Testimonials" } },
+    ]);
+  });
+
   it("returns null for an unknown host", async () => {
     resolveTenantFromHost.mockResolvedValueOnce(null);
 

@@ -1,16 +1,84 @@
-import { ProductStatus, type Prisma } from "@prisma/client";
+import { ProductStatus, StoreSectionType, type Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { resolveTenantFromHost } from "../tenant/resolve";
-import type { PublicStoreData } from "./types";
+import type { PublicStoreData, PublicStoreSection } from "./types";
 
 function readPublicString(
   config: Prisma.JsonValue,
-  key: "storeName" | "whatsAppNumber" | "accentColor" | "announcement",
+  key:
+    | "storeName"
+    | "whatsAppNumber"
+    | "accentColor"
+    | "announcement"
+    | "title"
+    | "subtitle"
+    | "ctaLabel"
+    | "ctaHref",
 ): string | undefined {
   if (!config || Array.isArray(config) || typeof config !== "object") return undefined;
 
   const value = config[key];
   return typeof value === "string" ? value : undefined;
+}
+
+function readPublicNumber(config: Prisma.JsonValue, key: "limit"): number | undefined {
+  if (!config || Array.isArray(config) || typeof config !== "object") return undefined;
+
+  const value = config[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function optionalValue<TKey extends string, TValue>(
+  key: TKey,
+  value: TValue | undefined,
+): { [K in TKey]?: TValue } {
+  return value === undefined ? {} : ({ [key]: value } as { [K in TKey]: TValue });
+}
+
+function mapPublicSection(section: {
+  type: StoreSectionType;
+  position: number;
+  content: Prisma.JsonValue;
+}): PublicStoreSection {
+  const title = optionalValue("title", readPublicString(section.content, "title"));
+
+  switch (section.type) {
+    case StoreSectionType.HERO:
+      return {
+        type: section.type,
+        position: section.position,
+        content: {
+          ...title,
+          ...optionalValue("subtitle", readPublicString(section.content, "subtitle")),
+          ...optionalValue("ctaLabel", readPublicString(section.content, "ctaLabel")),
+          ...optionalValue("ctaHref", readPublicString(section.content, "ctaHref")),
+        },
+      };
+    case StoreSectionType.CATEGORIES:
+      return { type: section.type, position: section.position, content: title };
+    case StoreSectionType.PRODUCT_FEED:
+      return {
+        type: section.type,
+        position: section.position,
+        content: {
+          ...title,
+          ...optionalValue("limit", readPublicNumber(section.content, "limit")),
+        },
+      };
+    case StoreSectionType.PROMOTIONS:
+      return {
+        type: section.type,
+        position: section.position,
+        content: {
+          ...title,
+          ...optionalValue("subtitle", readPublicString(section.content, "subtitle")),
+          ...optionalValue("ctaLabel", readPublicString(section.content, "ctaLabel")),
+          ...optionalValue("ctaHref", readPublicString(section.content, "ctaHref")),
+        },
+      };
+    case StoreSectionType.TESTIMONIALS:
+      return { type: section.type, position: section.position, content: title };
+  }
 }
 
 export async function loadPublicStore(host: string): Promise<PublicStoreData | null> {
@@ -85,7 +153,7 @@ export async function loadPublicStore(host: string): Promise<PublicStoreData | n
           config: accentColor ? { accentColor } : {},
         }
       : null,
-    sections,
+    sections: sections.map(mapPublicSection),
     categories,
     products: products.map((product) => ({
       name: product.name,
