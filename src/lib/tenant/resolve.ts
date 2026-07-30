@@ -1,4 +1,4 @@
-import type { Tenant } from "@prisma/client";
+import { TenantStatus, type Tenant } from "@prisma/client";
 import { prisma } from "../prisma";
 
 function normalizeHost(value: string): string {
@@ -29,6 +29,7 @@ export async function resolveTenantFromHost(host: string): Promise<Tenant | null
   return prisma.tenant.findFirst({
     where: {
       deletedAt: null,
+      status: TenantStatus.ACTIVE,
       OR: [
         ...(subdomain ? [{ subdomain }] : []),
         { publicDomain: normalizedHost },

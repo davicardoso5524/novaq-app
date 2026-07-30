@@ -16,16 +16,9 @@ export async function requireTenantContext(input: {
   userId: string;
 }): Promise<TenantContext> {
   return prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-    const [user, tenant] = await Promise.all([
-      transaction.user.findFirst({ where: { id: input.userId, ativo: true } }),
-      transaction.tenant.findFirst({
-        where: {
-          id: input.tenantId,
-          status: TenantStatus.ACTIVE,
-          deletedAt: null,
-        },
-      }),
-    ]);
+    const user = await transaction.user.findFirst({
+      where: { id: input.userId, ativo: true },
+    });
 
     if (!user) {
       throw new TenantAccessError(
@@ -33,6 +26,15 @@ export async function requireTenantContext(input: {
         "Usuário inexistente ou inativo.",
       );
     }
+
+    const isSuperadmin = user.role === GlobalRole.SUPERADMIN;
+    const tenant = await transaction.tenant.findFirst({
+      where: {
+        id: input.tenantId,
+        deletedAt: null,
+        ...(isSuperadmin ? {} : { status: TenantStatus.ACTIVE }),
+      },
+    });
     if (!tenant) {
       throw new TenantAccessError(
         "TENANT_NOT_FOUND",
@@ -40,7 +42,6 @@ export async function requireTenantContext(input: {
       );
     }
 
-    const isSuperadmin = user.role === GlobalRole.SUPERADMIN;
     const membership = await transaction.membership.findFirst({
       where: { tenantId: tenant.id, userId: user.id },
     });

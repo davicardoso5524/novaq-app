@@ -74,6 +74,24 @@ describe("tenant isolation", () => {
     expect(tenantFilter(contextB)).toEqual({ tenantId: "tenant-b" });
   });
 
+  it("lets a superadmin recover a suspended tenant while regular users remain blocked", async () => {
+    const suspendedTenant = { ...tenantA, status: TenantStatus.SUSPENDED };
+    database.user.findFirst
+      .mockResolvedValueOnce({ ...owner, role: GlobalRole.SUPERADMIN })
+      .mockResolvedValueOnce(owner);
+    database.tenant.findFirst
+      .mockResolvedValueOnce(suspendedTenant)
+      .mockResolvedValueOnce(null);
+    database.membership.findFirst.mockResolvedValue(null);
+
+    await expect(
+      requireTenantContext({ tenantId: tenantA.id, userId: owner.id }),
+    ).resolves.toMatchObject({ tenant: suspendedTenant, isSuperadmin: true });
+    await expect(
+      requireTenantContext({ tenantId: tenantA.id, userId: owner.id }),
+    ).rejects.toMatchObject({ code: "TENANT_NOT_FOUND" });
+  });
+
   it("rejects a suspended membership", async () => {
     database.user.findFirst.mockResolvedValue(owner);
     database.tenant.findFirst.mockResolvedValue(tenantA);
@@ -99,6 +117,7 @@ describe("tenant isolation", () => {
     expect(database.tenant.findFirst).toHaveBeenCalledWith({
       where: {
         deletedAt: null,
+        status: TenantStatus.ACTIVE,
         OR: [{ subdomain: "loja-a" }, { publicDomain: "loja-a.localhost" }],
       },
     });
