@@ -20,6 +20,13 @@ type AppearanceCapabilities = {
   templates: typeof appearanceTemplateCapabilities;
 };
 
+type PublishedThemeConfig = {
+  storeName: string;
+  accentColor: string;
+  announcement: string;
+  whatsAppNumber: string;
+};
+
 export type TenantAppearancePayload = AppearanceState & {
   capabilities: AppearanceCapabilities;
 };
@@ -33,6 +40,15 @@ function buildCapabilities(context: TenantContext): AppearanceCapabilities {
     canEdit: canManage,
     canPublish: canManage,
     templates: appearanceTemplateCapabilities,
+  };
+}
+
+function toPublishedThemeConfig(draft: AppearanceDraft): PublishedThemeConfig {
+  return {
+    storeName: draft.theme.storeName,
+    accentColor: draft.theme.accentColor,
+    announcement: draft.theme.announcement,
+    whatsAppNumber: draft.theme.whatsAppNumber,
   };
 }
 
@@ -176,13 +192,21 @@ export async function publishTenantAppearance(input: {
   const draft = appearanceDraftSchema.parse(current.draft);
   const publishedAt = new Date();
   const sectionRows = mapSectionRows(input.context.tenantId, draft);
+  const publishedConfig = toPublishedThemeConfig(draft);
 
   await prisma.$transaction(async (transaction) => {
-    await transaction.storeTheme.update({
+    await transaction.storeTheme.upsert({
       where: { tenantId: input.context.tenantId },
-      data: {
+      create: {
+        tenantId: input.context.tenantId,
         template: draft.template,
-        publishedConfig: draft,
+        draftConfig: draft,
+        publishedConfig,
+        publishedAt,
+      },
+      update: {
+        template: draft.template,
+        publishedConfig,
         publishedAt,
       },
     });

@@ -74,6 +74,12 @@ const adminMembership = {
   role: MembershipRole.ADMIN,
 };
 
+const editorMembership = {
+  ...ownerMembership,
+  id: "membership-editor",
+  role: MembershipRole.EDITOR,
+};
+
 const viewerMembership = {
   ...ownerMembership,
   id: "membership-viewer",
@@ -301,6 +307,37 @@ describe("tenant appearance API", () => {
     expect(mocks.storeTheme.upsert).not.toHaveBeenCalled();
   });
 
+  it("rejects writes from editors even when they can access the tenant", async () => {
+    mocks.auth.mockResolvedValue(session("user-editor"));
+    mocks.requireTenantContext.mockResolvedValue({
+      tenantId: tenant.id,
+      tenant,
+      userId: "user-editor",
+      membership: editorMembership,
+      isSuperadmin: false,
+    });
+
+    const patchResponse = await patchAppearance(
+      new Request("http://localhost/api/tenants/tenant-modabella/appearance", {
+        method: "PATCH",
+        body: JSON.stringify(buildDraft()),
+      }),
+      buildRouteContext(),
+    );
+
+    const publishResponse = await publishAppearance(
+      new Request("http://localhost/api/tenants/tenant-modabella/appearance/publish", {
+        method: "POST",
+      }),
+      buildRouteContext(),
+    );
+
+    expect(patchResponse.status).toBe(403);
+    expect(publishResponse.status).toBe(403);
+    expect(mocks.storeTheme.upsert).not.toHaveBeenCalled();
+    expect(mocks.storeTheme.update).not.toHaveBeenCalled();
+  });
+
   it("does not trust a tenant outside the authenticated membership context", async () => {
     mocks.auth.mockResolvedValue(session());
     mocks.requireTenantContext.mockRejectedValue(
@@ -434,18 +471,28 @@ describe("tenant appearance API", () => {
 
     expect(response.status).toBe(201);
     expect(mocks.$transaction).toHaveBeenCalledTimes(1);
-    expect(mocks.storeTheme.update).toHaveBeenCalledWith(
+    expect(mocks.storeTheme.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: tenant.id },
-        data: expect.objectContaining({
+        update: expect.objectContaining({
           template: TemplateKey.MODABELLA,
-          publishedConfig: buildDraft({
-            sections: {
-              categories: { title: "Categorias", enabled: false },
-              productFeed: { title: "Mais amados", enabled: true, limit: 8 },
-            },
+          publishedConfig: expect.objectContaining({
+            storeName: "ModaBella",
+            accentColor: "#B45372",
+            announcement: "Frete grátis em Fortaleza.",
+            whatsAppNumber: "5585987654321",
           }),
           publishedAt: expect.any(Date),
+        }),
+        create: expect.objectContaining({
+          tenantId: tenant.id,
+          template: TemplateKey.MODABELLA,
+          publishedConfig: expect.objectContaining({
+            storeName: "ModaBella",
+            accentColor: "#B45372",
+            announcement: "Frete grátis em Fortaleza.",
+            whatsAppNumber: "5585987654321",
+          }),
         }),
       }),
     );
@@ -468,5 +515,44 @@ describe("tenant appearance API", () => {
     );
     expect(body.published.sections.categories.enabled).toBe(false);
     expect(body.published.sections.productFeed.limit).toBe(8);
+  });
+
+  it("creates a store theme on the first publish when the tenant still has no theme row", async () => {
+    mocks.auth.mockResolvedValue(session());
+    mocks.requireTenantContext.mockResolvedValue({
+      tenantId: tenant.id,
+      tenant,
+      userId: "user-owner",
+      membership: ownerMembership,
+      isSuperadmin: false,
+    });
+    mocks.storeTheme.findUnique.mockResolvedValueOnce(null);
+    mocks.storeSection.findMany.mockResolvedValueOnce([]);
+
+    const response = await publishAppearance(
+      new Request("http://localhost/api/tenants/tenant-modabella/appearance/publish", {
+        method: "POST",
+      }),
+      buildRouteContext(),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mocks.storeTheme.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: tenant.id },
+        create: expect.objectContaining({
+          tenantId: tenant.id,
+          template: TemplateKey.MODABELLA,
+          publishedConfig: expect.objectContaining({
+            storeName: tenant.name,
+            accentColor: "#B45372",
+            announcement: "",
+            whatsAppNumber: "5585987654321",
+          }),
+          publishedAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(mocks.storeSection.createMany).toHaveBeenCalled();
   });
 });
