@@ -143,8 +143,8 @@ describe("shared storefront template registry", () => {
   it("uses the first published category in navigation and omits unavailable contact", () => {
     const html = renderToStaticMarkup(
       <BottomNavigation
+        activeItem="categories"
         categorySlug="acessorios"
-        current="category"
         whatsAppNumber={null}
         storeName="Moda Bella"
       />,
@@ -160,7 +160,7 @@ describe("shared storefront template registry", () => {
   it("marks only the current cart destination and leaves search without a false active item", () => {
     const cartHtml = renderToStaticMarkup(
       <BottomNavigation
-        current="cart"
+        activeItem="cart"
         categorySlug="acessorios"
         whatsAppNumber={null}
         storeName="Moda Bella"
@@ -168,7 +168,7 @@ describe("shared storefront template registry", () => {
     );
     const searchHtml = renderToStaticMarkup(
       <BottomNavigation
-        current={null}
+        activeItem={null}
         categorySlug="acessorios"
         whatsAppNumber={null}
         storeName="Moda Bella"
@@ -196,7 +196,7 @@ describe("shared storefront template registry", () => {
       <ProductGrid products={catalog.products} title="Destaques" />,
     );
     const navHtml = renderToStaticMarkup(
-      <BottomNavigation current={null} whatsAppNumber={null} storeName="Moda Bella" />,
+      <BottomNavigation activeItem={null} whatsAppNumber={null} storeName="Moda Bella" />,
     );
 
     expect(gridHtml).not.toContain("Ver todos");

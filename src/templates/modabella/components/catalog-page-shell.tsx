@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { PublicStoreData } from "../../../lib/catalog/types";
 import { BottomNavigation } from "./bottom-navigation";
-import type { BottomNavigationState } from "./bottom-navigation";
+import type { BottomNavigationItem } from "./bottom-navigation";
 import { StoreHeader } from "./store-header";
 
 type StoreStyle = CSSProperties & { "--store-accent": string };
@@ -9,18 +9,20 @@ type StoreStyle = CSSProperties & { "--store-accent": string };
 export function CatalogPageShell({
   data,
   children,
-  currentNavigation = null,
+  activeItem = null,
+  currentCategorySlug,
   hideBottomNavigation = false,
 }: {
   data: PublicStoreData;
   children: ReactNode;
-  currentNavigation?: BottomNavigationState;
+  activeItem?: BottomNavigationItem;
+  currentCategorySlug?: string;
   hideBottomNavigation?: boolean;
 }) {
   const style: StoreStyle = {
     "--store-accent": data.theme?.config.accentColor ?? "#6C3CE0",
   };
-  const firstCategorySlug = data.categories[0]?.slug;
+  const categoryDestinationSlug = currentCategorySlug ?? data.categories[0]?.slug;
 
   return (
     <div className="modabella-store" style={style}>
@@ -37,8 +39,8 @@ export function CatalogPageShell({
       </footer>
       {hideBottomNavigation ? null : (
         <BottomNavigation
-          categorySlug={firstCategorySlug}
-          current={currentNavigation}
+          activeItem={activeItem}
+          categorySlug={categoryDestinationSlug}
           whatsAppNumber={data.settings.whatsAppNumber}
           storeName={data.settings.name}
         />

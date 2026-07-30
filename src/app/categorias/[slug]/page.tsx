@@ -24,7 +24,11 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const products = data.products.filter((product) => product.categorySlug === category.slug);
 
   return (
-    <CatalogPageShell currentNavigation="category" data={data}>
+    <CatalogPageShell
+      activeItem="categories"
+      currentCategorySlug={category.slug}
+      data={data}
+    >
       <section className="modabella-section" aria-labelledby="category-title">
         <Link className="text-sm font-bold text-[var(--store-accent)]" href="/">
           ← Voltar ao catálogo

@@ -115,6 +115,19 @@ describe("public storefront discovery", () => {
     expect(html).toContain('class="is-active" aria-current="page" href="/categorias/vestidos"');
   });
 
+  it("keeps the secondary category href aligned with its active navigation state", async () => {
+    const page = await CategoryPage({ params: Promise.resolve({ slug: "acessorios" }) });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("Acessórios");
+    expect(html).toContain(
+      'class="is-active" aria-current="page" href="/categorias/acessorios"',
+    );
+    expect(html).not.toContain(
+      'class="is-active" aria-current="page" href="/categorias/vestidos"',
+    );
+  });
+
   it("returns not found for a category outside the resolved DTO", async () => {
     await expect(
       CategoryPage({ params: Promise.resolve({ slug: "categoria-inexistente" }) }),
