@@ -26,7 +26,7 @@ async function loadAppearancePreviewCatalog(tenantId: string): Promise<Pick<Publ
         category: { is: { active: true } },
       },
       orderBy: [{ updatedAt: "desc" }],
-      take: 12,
+      take: 24,
       select: {
         name: true,
         slug: true,

@@ -6,6 +6,7 @@ import { sanitizePublicImageUrl } from "../../../lib/catalog/public-image-url";
 function safeStoreHref(value: string | undefined, fallbackHref: string): string {
   if (value?.startsWith("#")) return value;
   if (value?.startsWith("/") && !value.startsWith("//")) return value;
+  if (value?.startsWith("https://")) return value;
   return fallbackHref;
 }
 

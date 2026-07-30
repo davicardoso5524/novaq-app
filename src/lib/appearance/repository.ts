@@ -92,9 +92,15 @@ function mapSectionRows(
   ];
 }
 
-async function readThemeState(tenantId: string, tenantName: string): Promise<AppearanceState> {
+type AppearanceDb = typeof prisma | Prisma.TransactionClient;
+
+async function readThemeState(
+  tenantId: string,
+  tenantName: string,
+  db: AppearanceDb = prisma,
+): Promise<AppearanceState> {
   const [theme, sections] = await Promise.all([
-    prisma.storeTheme.findUnique({
+    db.storeTheme.findUnique({
       where: { tenantId },
       select: {
         tenantId: true,
@@ -104,7 +110,7 @@ async function readThemeState(tenantId: string, tenantName: string): Promise<App
         publishedAt: true,
       },
     }),
-    prisma.storeSection.findMany({
+    db.storeSection.findMany({
       where: {
         tenantId,
         type: { in: [StoreSectionType.HERO, StoreSectionType.CATEGORIES, StoreSectionType.PRODUCT_FEED] },
@@ -188,13 +194,17 @@ export async function saveTenantAppearanceDraft(input: {
 export async function publishTenantAppearance(input: {
   context: TenantContext;
 }): Promise<TenantAppearancePayload> {
-  const current = await readThemeState(input.context.tenantId, input.context.tenant.name);
-  const draft = appearanceDraftSchema.parse(current.draft);
-  const publishedAt = new Date();
-  const sectionRows = mapSectionRows(input.context.tenantId, draft);
-  const publishedConfig = toPublishedThemeConfig(draft);
+  const published = await prisma.$transaction(async (transaction) => {
+    const current = await readThemeState(
+      input.context.tenantId,
+      input.context.tenant.name,
+      transaction,
+    );
+    const draft = appearanceDraftSchema.parse(current.draft);
+    const publishedAt = new Date();
+    const sectionRows = mapSectionRows(input.context.tenantId, draft);
+    const publishedConfig = toPublishedThemeConfig(draft);
 
-  await prisma.$transaction(async (transaction) => {
     await transaction.storeTheme.upsert({
       where: { tenantId: input.context.tenantId },
       create: {
@@ -235,12 +245,16 @@ export async function publishTenantAppearance(input: {
         metadata: { template: draft.template, publishedAt: publishedAt.toISOString() },
       },
     });
+
+    return { draft, publishedAt };
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   });
 
   return {
-    draft,
-    published: draft,
-    publishedAt,
+    draft: published.draft,
+    published: published.draft,
+    publishedAt: published.publishedAt,
     capabilities: buildCapabilities(input.context),
   };
 }
