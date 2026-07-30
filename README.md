@@ -1,6 +1,6 @@
 # plataforma-multitenant
 
-Scaffold inicial do aplicativo multi-tenant da Novaq.
+Fundação do aplicativo multi-tenant da Novaq, isolada dos sites e catálogos existentes.
 
 ## O que este pacote entrega
 
@@ -20,6 +20,7 @@ Scaffold inicial do aplicativo multi-tenant da Novaq.
 - `npm run db:generate`
 - `npm run db:push`
 - `npm run db:seed`
+- `npm run verify:foundation` — valida banco, seed, host e isolamento entre tenants
 
 ## Ambiente
 
@@ -27,10 +28,49 @@ Copie `.env.example` para `.env` e preencha os valores antes de conectar a um ba
 
 As senhas de seed presentes no exemplo são exclusivas para desenvolvimento local. Defina valores próprios antes de executar o seed em qualquer ambiente compartilhado.
 
-Para subir o PostgreSQL local:
+## Instalação local
+
+O Next.js 16 deste primeiro recorte usa React 18; por isso a instalação local precisa respeitar a resolução de peers registrada no lockfile:
+
+```bash
+npm install --legacy-peer-deps
+```
+
+Suba o PostgreSQL 16, aplique o schema e execute o seed:
 
 ```bash
 docker compose up -d postgres
+npm run db:generate
 npm run db:push
 npm run db:seed
+npm run verify:foundation
 ```
+
+Inicie o painel em seguida:
+
+```bash
+npm run dev
+```
+
+- Painel: `http://localhost:3002/painel`
+- Studio de Aparência: `http://localhost:3002/painel/aparencia`
+- Host de catálogo usado na verificação: `modabella-demo.localhost:3002`
+
+## Contas locais do seed
+
+- Superadmin: `admin@novaq.local` / valor de `SEED_SUPERADMIN_PASSWORD`
+- Owner ModaBella: `owner@modabella.local` / valor de `SEED_OWNER_PASSWORD`
+
+Os fallbacks do `.env.example` são somente para desenvolvimento local. Não os reutilize em ambiente compartilhado.
+
+## Validação completa
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run verify:foundation
+```
+
+O verificador cria dois tenants e registros temporários dentro de uma transação que é revertida ao final; assim ele prova o escopo sem deixar dados de teste no banco.
