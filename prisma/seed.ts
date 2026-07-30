@@ -1,5 +1,14 @@
-import { GlobalRole, MembershipRole, MembershipStatus, PrismaClient, TenantStatus } from "@prisma/client";
+import {
+  GlobalRole,
+  MembershipRole,
+  MembershipStatus,
+  Prisma,
+  PrismaClient,
+  ProductStatus,
+  TenantStatus,
+} from "@prisma/client";
 import { hash } from "bcryptjs";
+import { getModaBellaSeed } from "../src/lib/catalog/modabella-seed";
 import { getSeedPasswords } from "../src/lib/seed-config";
 
 const prisma = new PrismaClient();
@@ -88,6 +97,168 @@ async function main() {
       },
     }),
   ]);
+
+  const catalog = getModaBellaSeed();
+  const categoriesBySlug = new Map<string, string>();
+
+  for (const category of catalog.categories) {
+    const persistedCategory = await prisma.category.upsert({
+      where: { tenantId_slug: { tenantId: tenant.id, slug: category.slug } },
+      update: {
+        name: category.name,
+        position: category.position,
+        active: true,
+      },
+      create: {
+        tenantId: tenant.id,
+        name: category.name,
+        slug: category.slug,
+        position: category.position,
+      },
+    });
+
+    categoriesBySlug.set(category.slug, persistedCategory.id);
+  }
+
+  await prisma.storeTheme.upsert({
+    where: { tenantId: tenant.id },
+    update: {
+      template: catalog.theme.template,
+      draftConfig: catalog.theme.draftConfig as Prisma.InputJsonValue,
+      publishedConfig: catalog.theme.publishedConfig as Prisma.InputJsonValue,
+      publishedAt: new Date("2025-01-01T00:00:00.000Z"),
+    },
+    create: {
+      tenantId: tenant.id,
+      template: catalog.theme.template,
+      draftConfig: catalog.theme.draftConfig as Prisma.InputJsonValue,
+      publishedConfig: catalog.theme.publishedConfig as Prisma.InputJsonValue,
+      publishedAt: new Date("2025-01-01T00:00:00.000Z"),
+    },
+  });
+
+  await Promise.all(
+    catalog.sections.map((section) =>
+      prisma.storeSection.upsert({
+        where: {
+          tenantId_type_position: {
+            tenantId: tenant.id,
+            type: section.type,
+            position: section.position,
+          },
+        },
+        update: {
+          active: section.active,
+          content: section.content as Prisma.InputJsonValue,
+        },
+        create: {
+          tenantId: tenant.id,
+          type: section.type,
+          position: section.position,
+          active: section.active,
+          content: section.content as Prisma.InputJsonValue,
+        },
+      }),
+    ),
+  );
+
+  for (const product of catalog.products) {
+    const categoryId = categoriesBySlug.get(product.categorySlug);
+
+    if (!categoryId) {
+      throw new Error(`Missing ModaBella category for product ${product.slug}`);
+    }
+
+    const persistedProduct = await prisma.product.upsert({
+      where: { tenantId_slug: { tenantId: tenant.id, slug: product.slug } },
+      update: {
+        categoryId,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        status: ProductStatus.PUBLISHED,
+        publishedAt: new Date("2025-01-01T00:00:00.000Z"),
+        deletedAt: null,
+      },
+      create: {
+        tenantId: tenant.id,
+        categoryId,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        status: ProductStatus.PUBLISHED,
+        publishedAt: new Date("2025-01-01T00:00:00.000Z"),
+      },
+    });
+
+    await Promise.all(
+      product.variants.map((variant) =>
+        prisma.productVariant.upsert({
+          where: { tenantId_sku: { tenantId: tenant.id, sku: variant.sku } },
+          update: {
+            productId: persistedProduct.id,
+            size: variant.size,
+            color: variant.color,
+            stock: variant.stock,
+            price: variant.price,
+            active: true,
+          },
+          create: {
+            tenantId: tenant.id,
+            productId: persistedProduct.id,
+            sku: variant.sku,
+            size: variant.size,
+            color: variant.color,
+            stock: variant.stock,
+            price: variant.price,
+          },
+        }),
+      ),
+    );
+
+    for (const media of product.media) {
+      const mediaAsset = await prisma.mediaAsset.upsert({
+        where: { tenantId_storageKey: { tenantId: tenant.id, storageKey: media.storageKey } },
+        update: {
+          url: media.url,
+          fileName: media.fileName,
+          mimeType: media.mimeType,
+          sizeBytes: BigInt(media.sizeBytes),
+          altText: media.altText,
+          deletedAt: null,
+        },
+        create: {
+          tenantId: tenant.id,
+          storageKey: media.storageKey,
+          url: media.url,
+          fileName: media.fileName,
+          mimeType: media.mimeType,
+          sizeBytes: BigInt(media.sizeBytes),
+          altText: media.altText,
+        },
+      });
+
+      await prisma.productMedia.upsert({
+        where: {
+          tenantId_productId_mediaAssetId: {
+            tenantId: tenant.id,
+            productId: persistedProduct.id,
+            mediaAssetId: mediaAsset.id,
+          },
+        },
+        update: { position: media.position },
+        create: {
+          tenantId: tenant.id,
+          productId: persistedProduct.id,
+          mediaAssetId: mediaAsset.id,
+          position: media.position,
+        },
+      });
+    }
+  }
 }
 
 main()
