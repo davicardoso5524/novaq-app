@@ -58,6 +58,16 @@ npm run dev
 
 O host identifica o tenant do catálogo. Para testar outro tenant local, use o subdomínio cadastrado antes de `.localhost:3002`; o cliente não envia nem escolhe um `tenantId` público.
 
+## Workflow local do Studio de Aparência
+
+1. Entre no painel com uma conta OWNER ou ADMIN do tenant desejado.
+2. Abra `http://localhost:3002/painel/aparencia?tenantId=<tenant-id>` ou selecione o tenant pelo shell do painel.
+3. Edite o rascunho no Studio e use `Salvar rascunho` para persistir somente o draft interno.
+4. Confira o catálogo público no host do tenant, por exemplo `http://modabella-demo.localhost:3002`: o tema publicado continua igual até a ação de `Publicar alterações`.
+5. Use `Publicar alterações` quando quiser promover o draft. A publicação atualiza apenas o tenant selecionado, sem afetar outros catálogos.
+
+OWNER e ADMIN podem salvar/publicar. EDITOR e VIEWER continuam com experiência de leitura e recebem bloqueio para escrita pelas rotas protegidas.
+
 ## Contas locais do seed
 
 - Superadmin: `admin@novaq.local` / valor de `SEED_SUPERADMIN_PASSWORD`
@@ -68,7 +78,7 @@ Os fallbacks do `.env.example` são somente para desenvolvimento local. Não os 
 ## Validação completa
 
 ```bash
-npm test
+npm test -- --run
 npm run typecheck
 npm run lint
 npm run build
