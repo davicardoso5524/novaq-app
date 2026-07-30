@@ -8,6 +8,7 @@ coverage/
 output/
 .playwright-cli/
 .superpowers/
+docs/superpowers/
 .worktrees/
 *.log
 *.tsbuildinfo
