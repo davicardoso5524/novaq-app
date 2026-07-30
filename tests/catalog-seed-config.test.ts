@@ -20,6 +20,16 @@ describe("getModaBellaSeed", () => {
     const productSlugs = seed.products.map((product) => product.slug);
     expect(new Set(productSlugs).size).toBe(productSlugs.length);
 
+    const variantSkus = seed.products.flatMap((product) =>
+      product.variants.map((variant) => variant.sku),
+    );
+    expect(new Set(variantSkus).size).toBe(variantSkus.length);
+    expect(
+      seed.products.flatMap((product) => product.variants).some((variant) =>
+        typeof variant.price === "number" && variant.price > 0,
+      ),
+    ).toBe(true);
+
     for (const product of seed.products) {
       expect(product.price).toBeGreaterThan(0);
       expect(product.media.length).toBeGreaterThan(0);

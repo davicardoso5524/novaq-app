@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadPublicStore } from "@/lib/catalog/load-public-store";
+import { isAvailableStoreTemplate } from "@/lib/templates/registry";
 import { CatalogPageShell } from "@/templates/modabella/components/catalog-page-shell";
 import { ProductGrid } from "@/templates/modabella/components/product-grid";
 
@@ -14,7 +15,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
   const data = await loadPublicStore(host);
-  if (!data?.theme) notFound();
+  if (!data?.theme || !isAvailableStoreTemplate(data, "MODABELLA")) notFound();
 
   const { slug } = await params;
   const category = data.categories.find((item) => item.slug === slug);
@@ -23,7 +24,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const products = data.products.filter((product) => product.categorySlug === category.slug);
 
   return (
-    <CatalogPageShell data={data}>
+    <CatalogPageShell currentNavigation="category" data={data}>
       <section className="modabella-section" aria-labelledby="category-title">
         <Link className="text-sm font-bold text-[var(--store-accent)]" href="/">
           ← Voltar ao catálogo

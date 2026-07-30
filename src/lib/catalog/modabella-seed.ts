@@ -112,7 +112,7 @@ export function getModaBellaSeed(): ModaBellaSeed {
         price: 189.9,
         compareAtPrice: 229.9,
         variants: [
-          { sku: "MB-VA-ROSA-P", size: "P", color: "Rosa", stock: 8 },
+          { sku: "MB-VA-ROSA-P", size: "P", color: "Rosa", stock: 8, price: 179.9 },
           { sku: "MB-VA-ROSA-M", size: "M", color: "Rosa", stock: 12 },
           { sku: "MB-VA-ROSA-G", size: "G", color: "Rosa", stock: 6 },
         ],

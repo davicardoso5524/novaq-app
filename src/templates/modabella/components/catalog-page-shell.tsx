@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { PublicStoreData } from "../../../lib/catalog/types";
 import { BottomNavigation } from "./bottom-navigation";
+import type { BottomNavigationState } from "./bottom-navigation";
 import { StoreHeader } from "./store-header";
 
 type StoreStyle = CSSProperties & { "--store-accent": string };
@@ -8,9 +9,13 @@ type StoreStyle = CSSProperties & { "--store-accent": string };
 export function CatalogPageShell({
   data,
   children,
+  currentNavigation = null,
+  hideBottomNavigation = false,
 }: {
   data: PublicStoreData;
   children: ReactNode;
+  currentNavigation?: BottomNavigationState;
+  hideBottomNavigation?: boolean;
 }) {
   const style: StoreStyle = {
     "--store-accent": data.theme?.config.accentColor ?? "#6C3CE0",
@@ -30,11 +35,14 @@ export function CatalogPageShell({
         <strong>{data.settings.name}</strong>
         <span>Catálogo online</span>
       </footer>
-      <BottomNavigation
-        categorySlug={firstCategorySlug}
-        whatsAppNumber={data.settings.whatsAppNumber}
-        storeName={data.settings.name}
-      />
+      {hideBottomNavigation ? null : (
+        <BottomNavigation
+          categorySlug={firstCategorySlug}
+          current={currentNavigation}
+          whatsAppNumber={data.settings.whatsAppNumber}
+          storeName={data.settings.name}
+        />
+      )}
     </div>
   );
 }

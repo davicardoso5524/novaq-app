@@ -16,12 +16,33 @@ const templates: Partial<
   MODABELLA: ModaBellaStore,
 };
 
-export function renderStoreTemplate(data: PublicStoreData): ReactNode {
+export function getAvailableStoreTemplate(data: PublicStoreData): {
+  key: TemplateKey;
+  Component: ComponentType<{ data: PublicStoreData }>;
+} {
   const templateKey = data.theme?.template;
   if (!templateKey) throw new TemplateUnavailableError("UNPUBLISHED");
 
-  const Template = templates[templateKey];
-  if (!Template) throw new TemplateUnavailableError(templateKey);
+  const Component = templates[templateKey];
+  if (!Component) throw new TemplateUnavailableError(templateKey);
 
-  return <Template data={data} />;
+  return { key: templateKey, Component };
+}
+
+export function isAvailableStoreTemplate(
+  data: PublicStoreData,
+  expected: TemplateKey,
+): boolean {
+  try {
+    return getAvailableStoreTemplate(data).key === expected;
+  } catch (error) {
+    if (error instanceof TemplateUnavailableError) return false;
+    throw error;
+  }
+}
+
+export function renderStoreTemplate(data: PublicStoreData): ReactNode {
+  const { Component } = getAvailableStoreTemplate(data);
+
+  return <Component data={data} />;
 }

@@ -130,7 +130,7 @@ export async function loadPublicStore(host: string): Promise<PublicStoreData | n
         variants: {
           where: { tenantId, active: true },
           orderBy: { createdAt: "asc" },
-          select: { size: true, color: true, stock: true, price: true },
+          select: { sku: true, size: true, color: true, stock: true, price: true },
         },
         media: {
           where: { tenantId, mediaAsset: { is: { deletedAt: null } } },
@@ -172,6 +172,7 @@ export async function loadPublicStore(host: string): Promise<PublicStoreData | n
       price: product.price.toString(),
       compareAtPrice: product.compareAtPrice?.toString() ?? null,
       variants: product.variants.map((variant) => ({
+        sku: variant.sku,
         size: variant.size,
         color: variant.color,
         stock: variant.stock,

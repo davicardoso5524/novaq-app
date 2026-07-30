@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { PublicStoreData } from "../src/lib/catalog/types";
 import {
+  getAvailableStoreTemplate,
   renderStoreTemplate,
   TemplateUnavailableError,
 } from "../src/lib/templates/registry";
@@ -40,7 +41,7 @@ const catalog = {
       categorySlug: "vestidos",
       price: "189.90",
       compareAtPrice: "229.90",
-      variants: [{ size: "M", color: "Rosa", stock: 4, price: null }],
+      variants: [{ sku: "MB-AURORA-M", size: "M", color: "Rosa", stock: 4, price: null }],
       images: [{ url: "https://cdn.example.com/aurora.jpg", altText: "Vestido Aurora rosa" }],
     },
   ],
@@ -71,6 +72,7 @@ describe("shared storefront template registry", () => {
     expect(html).toContain('loading="eager"');
     expect(html).toContain('alt="Editorial da coleção de verão"');
     expect(html).toContain('src="https://cdn.example.com/editorial-hero.jpg"');
+    expect(html).toContain('aria-current="page"');
     expect(JSON.stringify(catalog)).toBe(before);
   });
 
@@ -82,6 +84,7 @@ describe("shared storefront template registry", () => {
     };
 
     expect(() => renderStoreTemplate(unavailableCatalog)).toThrow(TemplateUnavailableError);
+    expect(() => getAvailableStoreTemplate(unavailableCatalog)).toThrow(TemplateUnavailableError);
     expect(JSON.stringify(catalog)).toBe(before);
     expect(JSON.stringify(unavailableCatalog.categories)).toBe(JSON.stringify(catalog.categories));
     expect(JSON.stringify(unavailableCatalog.products)).toBe(JSON.stringify(catalog.products));
@@ -141,14 +144,51 @@ describe("shared storefront template registry", () => {
     const html = renderToStaticMarkup(
       <BottomNavigation
         categorySlug="acessorios"
+        current="category"
         whatsAppNumber={null}
         storeName="Moda Bella"
       />,
     );
 
     expect(html).toContain('href="/categorias/acessorios"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).not.toContain('href="/" aria-current="page"');
     expect(html).not.toContain("Contato");
     expect(html).not.toContain("wa.me");
+  });
+
+  it("marks only the current cart destination and leaves search without a false active item", () => {
+    const cartHtml = renderToStaticMarkup(
+      <BottomNavigation
+        current="cart"
+        categorySlug="acessorios"
+        whatsAppNumber={null}
+        storeName="Moda Bella"
+      />,
+    );
+    const searchHtml = renderToStaticMarkup(
+      <BottomNavigation
+        current={null}
+        categorySlug="acessorios"
+        whatsAppNumber={null}
+        storeName="Moda Bella"
+      />,
+    );
+
+    expect(cartHtml).toContain('class="is-active" aria-current="page" href="/carrinho"');
+    expect(cartHtml.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(searchHtml).not.toContain('aria-current="page"');
+    expect(searchHtml).not.toContain('class="is-active"');
+  });
+
+  it("uses the product name when a safe grid image has blank alt text", () => {
+    const products = catalog.products.map((product) => ({
+      ...product,
+      images: product.images.map((image) => ({ ...image, altText: "   " })),
+    }));
+    const html = renderToStaticMarkup(<ProductGrid products={products} title="Destaques" />);
+
+    expect(html).toContain('alt="Vestido Aurora"');
   });
 
   it("omits category links when the tenant has no published category", () => {
@@ -156,7 +196,7 @@ describe("shared storefront template registry", () => {
       <ProductGrid products={catalog.products} title="Destaques" />,
     );
     const navHtml = renderToStaticMarkup(
-      <BottomNavigation whatsAppNumber={null} storeName="Moda Bella" />,
+      <BottomNavigation current={null} whatsAppNumber={null} storeName="Moda Bella" />,
     );
 
     expect(gridHtml).not.toContain("Ver todos");

@@ -182,7 +182,7 @@ describe("public catalog host isolation", () => {
           price: "189.90",
           compareAtPrice: "229.90",
           variants: [
-            { size: "P", color: "Rosa", stock: 8, price: "199.90" },
+            { sku: "MB-AURORA-P", size: "P", color: "Rosa", stock: 8, price: "199.90" },
           ],
           images: [
             { url: "https://cdn.example.com/aurora.jpg", altText: "Vestido Aurora rosa" },
@@ -195,6 +195,16 @@ describe("public catalog host isolation", () => {
         texts: { announcement: "Frete grátis em Fortaleza." },
       },
     });
+
+    expect(database.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          variants: expect.objectContaining({
+            select: expect.objectContaining({ sku: true }),
+          }),
+        }),
+      }),
+    );
   });
 
   it("whitelists public content fields for every section type", async () => {

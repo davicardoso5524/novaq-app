@@ -33,7 +33,7 @@ export function ProductGrid({
                 <Link href={`/produto/${product.slug}`}>
                   <div className="modabella-product-card__image">
                     {image && imageUrl ? (
-                      <Image src={imageUrl} alt={image.altText ?? product.name} fill sizes="(max-width: 640px) 50vw, 280px" loading={index === 0 ? "eager" : "lazy"} unoptimized />
+                      <Image src={imageUrl} alt={image.altText?.trim() || product.name} fill sizes="(max-width: 640px) 50vw, 280px" loading={index === 0 ? "eager" : "lazy"} unoptimized />
                     ) : <span aria-hidden="true">✦</span>}
                   </div>
                   <div className="modabella-product-card__body">

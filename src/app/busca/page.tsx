@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { loadPublicStore } from "@/lib/catalog/load-public-store";
 import { searchPublicProducts } from "@/lib/catalog/search";
+import { isAvailableStoreTemplate } from "@/lib/templates/registry";
 import { CatalogPageShell } from "@/templates/modabella/components/catalog-page-shell";
 import { ProductGrid } from "@/templates/modabella/components/product-grid";
 
@@ -14,7 +15,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
   const data = await loadPublicStore(host);
-  if (!data?.theme) notFound();
+  if (!data?.theme || !isAvailableStoreTemplate(data, "MODABELLA")) notFound();
 
   const params = await searchParams;
   const rawTerm = Array.isArray(params.q) ? (params.q[0] ?? "") : (params.q ?? "");

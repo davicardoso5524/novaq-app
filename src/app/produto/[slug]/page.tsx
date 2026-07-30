@@ -4,23 +4,20 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { loadPublicStore } from "@/lib/catalog/load-public-store";
 import { sanitizePublicImageUrl } from "@/lib/catalog/public-image-url";
+import { isAvailableStoreTemplate } from "@/lib/templates/registry";
 import { CatalogPageShell } from "@/templates/modabella/components/catalog-page-shell";
+import { ProductPurchaseForm } from "@/templates/modabella/components/product-purchase-form";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
-
-const money = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const requestHeaders = await headers();
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
   const data = await loadPublicStore(host);
-  if (!data?.theme) notFound();
+  if (!data?.theme || !isAvailableStoreTemplate(data, "MODABELLA")) notFound();
 
   const { slug } = await params;
   const product = data.products.find((item) => item.slug === slug);
@@ -31,11 +28,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
     const safeUrl = sanitizePublicImageUrl(image.url);
     return safeUrl ? [{ ...image, url: safeUrl }] : [];
   });
-  const availableVariants = product.variants.filter((variant) => variant.stock > 0);
-  const totalStock = availableVariants.reduce((total, variant) => total + variant.stock, 0);
 
   return (
-    <CatalogPageShell data={data}>
+    <CatalogPageShell data={data} hideBottomNavigation>
       <article className="modabella-section pb-10">
         <Link className="text-sm font-bold text-[var(--store-accent)]" href={category ? `/categorias/${category.slug}` : "/"}>
           ← {category ? `Voltar para ${category.name}` : "Voltar ao catálogo"}
@@ -51,7 +46,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     key={`${image.url}-${index}`}
                   >
                     <Image
-                      alt={image.altText ?? `${product.name}, imagem ${index + 1}`}
+                      alt={image.altText?.trim() || product.name}
                       className="object-cover"
                       fill
                       priority={index === 0}
@@ -79,12 +74,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
               {product.name}
             </h1>
 
-            <div className="mt-5 flex flex-wrap items-baseline gap-3">
-              <strong className="text-3xl text-orange-600">{money.format(Number(product.price))}</strong>
-              {product.compareAtPrice ? (
-                <del className="text-base text-gray-500">{money.format(Number(product.compareAtPrice))}</del>
-              ) : null}
-            </div>
+            <ProductPurchaseForm
+              basePrice={product.price}
+              compareAtPrice={product.compareAtPrice}
+              productSlug={product.slug}
+              variants={product.variants}
+            />
 
             {product.description ? (
               <div className="mt-7 border-t border-purple-100 pt-6">
@@ -93,40 +88,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
             ) : null}
 
-            <form action="/carrinho" className="mt-7 border-t border-purple-100 pt-6" method="get">
-              <input name="produto" type="hidden" value={product.slug} />
-              <fieldset disabled={!availableVariants.length}>
-                <legend className="font-bold text-gray-900">Escolha uma opção</legend>
-                {availableVariants.length ? (
-                  <div className="mt-3 grid gap-2">
-                    {availableVariants.map((variant, index) => {
-                      const label = `${variant.size} · ${variant.color}`;
-                      return (
-                        <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-purple-100 px-4 py-3 text-sm text-gray-700 has-[:checked]:border-[var(--store-accent)] has-[:checked]:bg-purple-50" key={`${variant.size}-${variant.color}-${index}`}>
-                          <span className="flex items-center gap-3">
-                            <input defaultChecked={index === 0} name="variante" required type="radio" value={label} />
-                            <span className="font-semibold">{label}</span>
-                          </span>
-                          <span>{variant.stock} em estoque</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="mt-3 rounded-2xl bg-gray-100 p-4 text-sm text-gray-600">Produto esgotado no momento.</p>
-                )}
-              </fieldset>
-              <p className="mt-4 text-sm text-gray-600" aria-live="polite">
-                {totalStock} {totalStock === 1 ? "unidade disponível" : "unidades disponíveis"}
-              </p>
-              <button
-                className="mt-5 min-h-12 w-full rounded-2xl bg-[var(--store-accent)] px-5 font-bold text-white disabled:cursor-not-allowed disabled:bg-gray-400"
-                disabled={!availableVariants.length}
-                type="submit"
-              >
-                Adicionar ao carrinho
-              </button>
-            </form>
           </section>
         </div>
       </article>

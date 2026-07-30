@@ -72,6 +72,7 @@ export type PublicCategory = {
 };
 
 export type PublicProductVariant = {
+  sku: string;
   size: string;
   color: string;
   stock: number;

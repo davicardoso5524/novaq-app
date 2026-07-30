@@ -41,6 +41,7 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
       </footer>
       <BottomNavigation
         categorySlug={firstCategorySlug}
+        current="home"
         whatsAppNumber={data.settings.whatsAppNumber}
         storeName={data.settings.name}
       />
