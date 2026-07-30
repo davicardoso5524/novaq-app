@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --background: #06110d;
   --foreground: #f2f7f5;
   --muted: #9ab0a9;
@@ -11,6 +11,170 @@
   --border: rgba(32, 213, 134, 0.14);
   --primary: #20d586;
   --ring: rgba(32, 213, 134, 0.3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.modabella-store {
+  --store-accent: #6c3ce0;
+  min-height: 100vh;
+  padding-bottom: 96px;
+  background: #f8f5ff;
+  color: #1f2937;
+}
+
+.modabella-announcement {
+  margin: 0;
+  padding: 8px 16px;
+  background: var(--store-accent);
+  color: #fff;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.modabella-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid rgba(108, 60, 224, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+}
+
+.modabella-header__row,
+.modabella-main,
+.modabella-footer {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.modabella-header__row {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+.modabella-logo {
+  color: var(--store-accent);
+  font-size: clamp(19px, 3vw, 24px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.modabella-header__actions { display: flex; gap: 6px; }
+.modabella-icon-button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  color: #626777;
+}
+.modabella-icon-button:hover { background: #f2ecff; color: var(--store-accent); }
+
+.modabella-search {
+  display: none;
+  position: relative;
+  width: min(460px, 40vw);
+  align-items: center;
+}
+.modabella-search svg { position: absolute; left: 14px; color: #777b88; }
+.modabella-search input {
+  width: 100%;
+  border: 1px solid #e9e2f7;
+  border-radius: 16px;
+  background: #f7f3ff;
+  padding: 12px 16px 12px 44px;
+  color: #252231;
+}
+
+.modabella-main { overflow: hidden; }
+.modabella-hero {
+  position: relative;
+  display: flex;
+  min-height: 270px;
+  overflow: hidden;
+  align-items: center;
+  background: linear-gradient(135deg, #33205e 0%, var(--store-accent) 72%, #9c78f3 100%);
+  color: #fff;
+}
+.modabella-hero__content { position: relative; z-index: 2; max-width: 630px; padding: 36px clamp(22px, 6vw, 72px); }
+.modabella-hero__eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; opacity: .8; }
+.modabella-hero h1 { max-width: 560px; margin: 9px 0 0; font-size: clamp(29px, 5vw, 52px); line-height: 1.02; letter-spacing: -.045em; }
+.modabella-hero p { max-width: 480px; margin: 14px 0 22px; color: rgba(255,255,255,.82); font-size: clamp(14px, 2vw, 17px); line-height: 1.6; }
+.modabella-button { display: inline-flex; min-height: 44px; align-items: center; border-radius: 15px; background: #fff; padding: 11px 19px; color: #4f229c; font-size: 14px; font-weight: 750; }
+.modabella-hero__shape { position: absolute; right: clamp(20px, 8vw, 100px); display: grid; width: 150px; height: 190px; place-items: center; transform: rotate(8deg); border: 1px solid rgba(255,255,255,.3); border-radius: 80px 80px 28px 28px; background: rgba(255,255,255,.12); font-size: 36px; font-weight: 800; opacity: .7; }
+.modabella-hero__glow { position: absolute; right: 3%; width: 260px; height: 260px; border-radius: 50%; background: rgba(255,255,255,.12); filter: blur(30px); }
+
+.modabella-section { padding: 30px clamp(16px, 4vw, 48px) 4px; }
+.modabella-section__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.modabella-section__heading h2 { margin: 0; font-size: clamp(18px, 2.5vw, 24px); letter-spacing: -.025em; }
+.modabella-section__heading a { display: inline-flex; align-items: center; color: var(--store-accent); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.modabella-section__heading a svg { width: 16px; height: 16px; }
+.modabella-categories { display: flex; gap: clamp(14px, 3vw, 28px); overflow-x: auto; padding: 2px 2px 10px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.modabella-category { display: flex; flex: 0 0 84px; flex-direction: column; align-items: center; gap: 10px; scroll-snap-align: start; color: #5f6472; font-size: 12px; text-align: center; }
+.modabella-category > span { display: grid; width: 78px; height: 78px; place-items: center; border: 1px solid #e9defe; border-radius: 50%; background: #f0e9ff; color: var(--store-accent); font-size: 28px; }
+.modabella-category strong { font-weight: 600; }
+.modabella-products { padding-bottom: 34px; }
+.modabella-product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.modabella-product-card { overflow: hidden; border: 1px solid rgba(108,60,224,.07); border-radius: 20px; background: #fff; box-shadow: 0 8px 24px rgba(47,36,75,.08); }
+.modabella-product-card__image { position: relative; display: grid; aspect-ratio: 4 / 4.7; place-items: center; overflow: hidden; background: linear-gradient(145deg, #efe8ff, #faf7ff); color: var(--store-accent); font-size: 38px; }
+.modabella-product-card__image img { object-fit: cover; transition: transform .3s ease; }
+.modabella-product-card:hover img { transform: scale(1.035); }
+.modabella-product-card__body { padding: 13px; }
+.modabella-product-card h3 { min-height: 40px; margin: 0; font-size: 14px; line-height: 1.45; }
+.modabella-product-card__prices { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin-top: 8px; }
+.modabella-product-card__prices strong { color: #e85f12; font-size: 15px; }
+.modabella-product-card__prices del { color: #858995; font-size: 11px; }
+.modabella-empty { margin: 0; border: 1px dashed #dcd3ed; border-radius: 16px; padding: 24px; color: #717582; text-align: center; }
+.modabella-footer { display: flex; flex-direction: column; gap: 4px; padding: 28px 20px 36px; color: #717582; text-align: center; }
+.modabella-footer strong { color: var(--store-accent); }
+.modabella-footer span { font-size: 12px; }
+.modabella-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 40; display: flex; min-height: 76px; align-items: center; justify-content: space-around; border-radius: 26px 26px 0 0; background: rgba(255,255,255,.96); padding: 9px 10px max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -8px 30px rgba(45,33,70,.1); backdrop-filter: blur(16px); }
+.modabella-bottom-nav a { display: flex; min-width: 64px; min-height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 16px; color: #707482; font-size: 10px; font-weight: 600; }
+.modabella-bottom-nav a.is-active { flex-direction: row; gap: 7px; background: var(--store-accent); padding: 0 17px; color: #fff; }
+
+@media (min-width: 700px) {
+  .modabella-header { display: flex; align-items: center; padding: 0 max(24px, calc((100% - 1180px) / 2)); }
+  .modabella-header__row { width: auto; flex: 1; margin: 0; padding-inline: 0; }
+  .modabella-search { display: flex; margin-left: 30px; }
+  .modabella-hero { margin-top: 24px; border-radius: 28px; }
+  .modabella-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .modabella-store { padding-bottom: 0; }
+  .modabella-product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .modabella-bottom-nav { display: none; }
+}
+
+@media (max-width: 360px) {
+  .modabella-header__row { padding-inline: 14px; }
+  .modabella-hero { min-height: 245px; }
+  .modabella-hero__content { padding-inline: 18px; }
+  .modabella-hero__shape { right: -66px; opacity: .35; }
+  .modabella-section { padding-inline: 12px; }
+  .modabella-product-grid { gap: 10px; }
+  .modabella-product-card { border-radius: 16px; }
+  .modabella-product-card__body { padding: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
 * {

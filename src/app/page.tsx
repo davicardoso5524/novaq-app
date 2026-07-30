@@ -1,4 +1,7 @@
+import { headers } from "next/headers";
 import { platformName, platformTagline } from "@/lib/branding";
+import { loadPublicStore } from "@/lib/catalog/load-public-store";
+import { renderStoreTemplate } from "@/lib/templates/registry";
 
 const stack = [
   "Next.js 16 App Router",
@@ -6,7 +9,7 @@ const stack = [
   "Tailwind CSS + Vitest"
 ];
 
-export default function HomePage() {
+function PlatformHome() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <section className="w-full max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.3)] backdrop-blur-md sm:p-10">
@@ -44,4 +47,12 @@ export default function HomePage() {
       </section>
     </main>
   );
+}
+
+export default async function HomePage() {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
+  const store = await loadPublicStore(host);
+
+  return store?.theme ? renderStoreTemplate(store) : <PlatformHome />;
 }
