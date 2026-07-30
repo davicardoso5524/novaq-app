@@ -13,6 +13,9 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
   const categoryTitle = data.sections.find((section) => section.type === "CATEGORIES")?.content.title ?? "Categorias";
   const feed = data.sections.find((section) => section.type === "PRODUCT_FEED");
   const products = data.products.slice(0, feed?.content.limit ?? data.products.length);
+  const heroFallbackHref = data.categories[0]
+    ? `/categorias/${data.categories[0].slug}`
+    : "/categorias";
   const style: StoreStyle = { "--store-accent": data.theme?.config.accentColor ?? "#6C3CE0" };
 
   return (
@@ -20,7 +23,11 @@ export function ModaBellaStore({ data }: { data: PublicStoreData }) {
       {data.settings.texts.announcement ? <p className="modabella-announcement">{data.settings.texts.announcement}</p> : null}
       <StoreHeader name={data.settings.name} />
       <main className="modabella-main">
-        <HeroSection section={hero} />
+        <HeroSection
+          section={hero}
+          fallbackHref={heroFallbackHref}
+          featuredProduct={data.products[0]}
+        />
         <CategoryStrip categories={data.categories} title={categoryTitle} />
         <ProductGrid products={products} title={feed?.content.title ?? "Destaques"} />
       </main>

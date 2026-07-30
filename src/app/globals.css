@@ -27,6 +27,7 @@
 
 .modabella-store {
   --store-accent: #6c3ce0;
+  --store-focus: #241046;
   min-height: 100vh;
   padding-bottom: 96px;
   background: #f8f5ff;
@@ -112,6 +113,8 @@
   color: #fff;
 }
 .modabella-hero__content { position: relative; z-index: 2; max-width: 630px; padding: 36px clamp(22px, 6vw, 72px); }
+.modabella-hero__image { object-fit: cover; object-position: center 35%; }
+.modabella-hero__overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(31,12,61,.94) 0%, rgba(63,28,98,.78) 48%, rgba(74,30,101,.28) 100%); }
 .modabella-hero__eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; opacity: .8; }
 .modabella-hero h1 { max-width: 560px; margin: 9px 0 0; font-size: clamp(29px, 5vw, 52px); line-height: 1.02; letter-spacing: -.045em; }
 .modabella-hero p { max-width: 480px; margin: 14px 0 22px; color: rgba(255,255,255,.82); font-size: clamp(14px, 2vw, 17px); line-height: 1.6; }
@@ -227,4 +230,10 @@ input:focus-visible,
 select:focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 3px;
+}
+
+.modabella-store :is(a, button, input, select):focus-visible {
+  outline: 3px solid var(--store-focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px #fff;
 }

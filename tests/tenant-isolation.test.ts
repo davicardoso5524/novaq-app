@@ -118,7 +118,20 @@ describe("tenant isolation", () => {
       where: {
         deletedAt: null,
         status: TenantStatus.ACTIVE,
-        OR: [{ subdomain: "loja-a" }, { publicDomain: "loja-a.localhost" }],
+        subdomain: "loja-a",
+      },
+    });
+  });
+
+  it("resolves an external host only through its public domain", async () => {
+    database.tenant.findFirst.mockResolvedValue(tenantA);
+
+    await expect(resolveTenantFromHost("LOJA-A.example.com:443")).resolves.toBe(tenantA);
+    expect(database.tenant.findFirst).toHaveBeenCalledWith({
+      where: {
+        deletedAt: null,
+        status: TenantStatus.ACTIVE,
+        publicDomain: "loja-a.example.com",
       },
     });
   });

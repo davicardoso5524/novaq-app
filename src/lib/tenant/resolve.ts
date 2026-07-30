@@ -25,15 +25,15 @@ export async function resolveTenantFromHost(host: string): Promise<Tenant | null
     suffix && normalizedHost.endsWith(suffix)
       ? normalizedHost.slice(0, -suffix.length)
       : null;
+  const hostFilter = subdomain
+    ? { subdomain }
+    : { publicDomain: normalizedHost };
 
   return prisma.tenant.findFirst({
     where: {
       deletedAt: null,
       status: TenantStatus.ACTIVE,
-      OR: [
-        ...(subdomain ? [{ subdomain }] : []),
-        { publicDomain: normalizedHost },
-      ],
+      ...hostFilter,
     },
   });
 }

@@ -5,6 +5,9 @@ import {
   renderStoreTemplate,
   TemplateUnavailableError,
 } from "../src/lib/templates/registry";
+import { BottomNavigation } from "../src/templates/modabella/components/bottom-navigation";
+import { HeroSection } from "../src/templates/modabella/components/hero-section";
+import { ProductGrid } from "../src/templates/modabella/components/product-grid";
 
 const catalog = {
   tenant: { name: "Loja de teste", slug: "loja-de-teste" },
@@ -64,6 +67,7 @@ describe("shared storefront template registry", () => {
     expect(html).toContain('id="novidades"');
     expect(html).toContain("189,90");
     expect(html).toContain('loading="eager"');
+    expect(html).toContain('alt="Destaque da coleção: Vestido Aurora"');
     expect(JSON.stringify(catalog)).toBe(before);
   });
 
@@ -94,5 +98,44 @@ describe("shared storefront template registry", () => {
 
     expect(html).not.toContain("javascript:");
     expect(html).toContain('href="/categorias/vestidos"');
+  });
+
+  it("links the complete product feed to the categories index", () => {
+    const html = renderToStaticMarkup(
+      <ProductGrid products={catalog.products} title="Destaques" />,
+    );
+
+    expect(html).toContain('href="/categorias"');
+    expect(html).not.toContain('href="/categorias/vestidos">Ver todos');
+    expect(html).toContain('loading="eager"');
+  });
+
+  it("derives the hero fallback from the first tenant category", () => {
+    const section = {
+      type: "HERO",
+      position: 0,
+      content: { ctaHref: "javascript:alert(1)" },
+    } as const;
+    const html = renderToStaticMarkup(
+      <HeroSection
+        section={section}
+        fallbackHref="/categorias/acessorios"
+        featuredProduct={catalog.products[0]}
+      />,
+    );
+
+    expect(html).toContain('href="/categorias/acessorios"');
+    expect(html).toContain('alt="Destaque da coleção: Vestido Aurora"');
+    expect(html).not.toContain("javascript:");
+  });
+
+  it("uses the categories index in navigation and omits unavailable contact", () => {
+    const html = renderToStaticMarkup(
+      <BottomNavigation whatsAppNumber={null} storeName="Moda Bella" />,
+    );
+
+    expect(html).toContain('href="/categorias"');
+    expect(html).not.toContain("Contato");
+    expect(html).not.toContain("wa.me");
   });
 });
