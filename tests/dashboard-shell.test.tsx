@@ -7,8 +7,8 @@ describe("AppShell tenant isolation", () => {
     const html = renderToStaticMarkup(
       <AppShell
         user={{ name: "Maria", email: "maria@example.com" }}
-        activeTenant={{ id: "tenant-a", name: "ModaBella", role: "OWNER" }}
-        tenants={[{ id: "tenant-a", name: "ModaBella", role: "OWNER" }]}
+        activeTenant={{ id: "tenant-a", slug: "modabella", name: "ModaBella", role: "OWNER" }}
+        tenants={[{ id: "tenant-a", slug: "modabella", name: "ModaBella", role: "OWNER" }]}
       >
         <p>Resumo seguro</p>
       </AppShell>,

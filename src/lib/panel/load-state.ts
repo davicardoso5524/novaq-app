@@ -11,7 +11,7 @@ export async function loadPanelState(user: PanelUser, requestedTenantId?: string
       ? (
           await prisma.tenant.findMany({
             where: { status: TenantStatus.ACTIVE, deletedAt: null },
-            select: { id: true, name: true },
+            select: { id: true, slug: true, name: true },
             orderBy: { name: "asc" },
           })
         ).map((tenant) => ({ ...tenant, role: "SUPERADMIN" as const }))
@@ -22,7 +22,7 @@ export async function loadPanelState(user: PanelUser, requestedTenantId?: string
               status: MembershipStatus.ACTIVE,
               tenant: { status: TenantStatus.ACTIVE, deletedAt: null },
             },
-            select: { role: true, tenant: { select: { id: true, name: true } } },
+            select: { role: true, tenant: { select: { id: true, slug: true, name: true } } },
             orderBy: { tenant: { name: "asc" } },
           })
         ).map(({ tenant, role }) => ({ ...tenant, role }));

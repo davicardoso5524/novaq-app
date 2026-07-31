@@ -2,6 +2,7 @@
 
 export type TenantSummary = {
   id: string;
+  slug: string;
   name: string;
   role: "SUPERADMIN" | "OWNER" | "ADMIN" | "EDITOR" | "VIEWER";
 };
